@@ -1,0 +1,211 @@
+/*
+ Copyright 2011 Hoyoung Yi.
+
+ This program is free software; you can redistribute it and/or modify it
+ under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+ License for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with this program; if not, please visit www.gnu.org.
+*/
+#ifndef __GEOMETRY_H__
+#define __GEOMETRY_H__
+
+#include <common.h>
+#include <dlink.h>
+#include <vector.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+  typedef struct {
+    int reference; // reference counter
+    real_t x, y, z;
+  } point_t;
+
+  real_t arctan2r(real_t dy, real_t dx);
+
+#define point_get_x(p) ((p)->x)
+#define point_get_y(p) ((p)->y)
+#define point_get_z(p) ((p)->z)
+#define point_get_ref(p) ((p)->reference)
+#define point_inc_ref(p) ((p)->reference++)
+#define point_dec_ref(p) ((p)->reference--)
+
+  point_t *point_new(void);
+  void point_assign(point_t *point, real_t x, real_t y, real_t z);
+  point_t *point_new_and_assign(real_t x, real_t y, real_t z);
+  void point_copy(point_t *copyer, point_t *copee);
+  int point_cmp(point_t *a, point_t *b);
+  point_t *point_new_and_copy(point_t *copee);
+  void point_dump(point_t *point);
+  void point_destroy(point_t *point);
+  void point_add(point_t *c, point_t *a, point_t *b);
+  void point_subtract(point_t *c, point_t *a, point_t *b);
+  real_t point_distance(point_t *point);
+  real_t point_dotproduct(point_t *a, point_t *b);
+  void point_xproduct(point_t *c, point_t *a, point_t *b);
+
+  real_t parallelogram_area_of_3points(point_t *a, point_t *org, point_t *b);
+  real_t area_of_3_points(point_t *A, point_t *B, point_t *C);
+  real_t distance_between_points(point_t *a, point_t *b);
+  real_t angle_between_points(point_t *a, point_t *b);
+  real_t angle_among_points(point_t *a, point_t *b, point_t *c);
+
+  typedef dlist_t point_list_t;
+
+#define point_list_new() (point_list_t *)dlist_new()
+#define point_list_inc_ref(p) ((p)->reference++)
+#define point_list_dec_ref(p) ((p)->reference--)
+#define point_list_get_ref(p) ((p)->reference)
+#define point_list_get_count(list) ((list)->count)
+  void point_list_copy(point_list_t *copyer, point_list_t *copee);
+  point_list_t *point_list_new_and_copy(point_list_t *list);
+  void point_list_push(point_t *point, point_list_t *list);
+  point_t *point_list_pop(point_list_t *list);
+  void point_list_insert(point_t *point, point_list_t *list);
+  point_t *point_list_extract(point_list_t *list);
+  point_t *point_list_glimpse(int i, point_list_t *list);
+  point_t *point_list_pick(int i, point_list_t *list);
+  void point_list_put(point_t *point, int i, point_list_t *list);
+#define point_list_exchange(i, j, list) dlist_exchange(i, j, (dlist_t *)(list));
+  int point_list_query(point_t *p, point_list_t *list);
+  void point_list_delete(point_list_t *list);
+  void point_list_destroy(point_list_t *list);
+  vector_t *cvector_new_and_copy_point_list(point_list_t *list);
+  void point_list_copy_cvector(point_list_t *list, vector_t *vec);
+
+  typedef struct {
+    int reference;
+    point_t *a;
+    point_t *b;
+  } line_t;
+
+#define line_get_a(p) ((p)->a)
+#define line_get_b(p) ((p)->b)
+#define line_inc_ref(p) ((p)->reference++)
+#define line_dec_ref(p) ((p)->reference--)
+#define line_get_ref(p) ((p)->reference)
+
+  line_t *line_new(void);
+  void line_assign(line_t *line, point_t *a, point_t *b);
+  line_t *line_new_and_assign(point_t *a, point_t *b);
+  void line_copy(line_t *copyer, line_t *copee);
+  line_t *line_new_and_copy(line_t *copee);
+  real_t line_length(line_t *line);
+  int line_cmp(line_t *x, line_t *y);
+  void line_dump(line_t *line);
+  void line_delete(line_t *line);
+  void line_destroy(line_t *line);
+
+  typedef dlist_t line_list_t;
+
+#define line_list_new() (line_list_t *)dlist_new()
+#define line_list_inc_ref(p) ((p)->reference++)
+#define line_list_dec_ref(p) ((p)->reference--)
+#define line_list_get_ref(p) ((p)->reference)
+#define line_list_get_count(list) ((list)->count)
+  void line_list_copy(line_list_t *copyer, line_list_t *copee);
+  line_list_t *line_list_new_and_copy(line_list_t *copee);
+  void line_list_push(line_t *line, line_list_t *list);
+  line_t *line_list_pop(line_list_t *list);
+  void line_list_insert(line_t *line, line_list_t *list);
+  line_t *line_list_extract(line_list_t *list);
+  line_t *line_list_glimpse(int i, line_list_t *list);
+  line_t *line_list_pick(int i, line_list_t *list);
+  void line_list_put(line_t *line, int i, line_list_t *list);
+#define line_list_exchange(i, j, list) dlist_exchange(i, j, (dlist_t *)(list))
+  int line_list_query(line_t *line, line_list_t *list);
+  void line_list_delete(line_list_t *list);
+  void line_list_destroy(line_list_t *list);
+
+  typedef struct {
+    int reference;
+    point_t *a, *b, *c;
+  } triangle_t;
+
+#define triangle_get_a(p) ((p)->a)
+#define triangle_get_b(p) ((p)->b)
+#define triangle_get_c(p) ((p)->c)
+#define triangle_inc_ref(p) ((p)->reference++)
+#define triangle_dec_ref(p) ((p)->reference--)
+#define triangle_get_ref(p) ((p)->reference)
+  triangle_t *triangle_new(void);
+  void triangle_assign(triangle_t *triangle, point_t *a, point_t *b, point_t *c);
+  triangle_t *triangle_new_and_assign(point_t *a, point_t *b, point_t *c);
+  void triangel_copy(triangle_t *copee);
+  triangle_t *triangle_new_and_copy(triangle_t *copee);
+  int triangle_cmp(triangle_t *x, triangle_t *y);
+  void triangle_dump(triangle_t *tri);
+  real_t triangle_area(triangle_t *tri);
+  real_t triangle_circumradius(triangle_t *tri);
+  real_t triangle_circumcircle(point_t *circumcenter, triangle_t *tri);
+  real_t triangle_inradius(triangle_t *tri);
+  real_t triangle_incircle(point_t *incenter, triangle_t *tri);
+  real_t triangle_a_exradius(triangle_t *tri);
+  real_t triangle_a_excircle(point_t *excenter, triangle_t *tri);
+  real_t triangle_b_exradius(triangle_t *tri);
+  real_t triangle_b_excircle(point_t *excenter, triangle_t *tri);
+  real_t triangle_c_exradius(triangle_t *tri);
+  real_t triangle_c_excircle(point_t *excenter, triangle_t *tri);
+  void triangle_delete(triangle_t *tri);
+  void triangle_destroy(triangle_t *triangle);
+
+  typedef dlist_t triangle_list_t;
+
+#define triangle_list_new() (triangle_list_t *)dlist_new()
+#define triangle_list_inc_ref(p) ((p)->reference++)
+#define triangle_list_dec_ref(p) ((p)->reference--)
+#define triangle_list_get_ref(p) ((p)->reference)
+#define triangle_list_get_count(list) ((list)->count)
+  void triangle_list_copy(triangle_list_t *copyer, triangle_list_t *copee);
+  triangle_list_t *triangle_list_new_and_copy(triangle_list_t *copee);
+  void triangle_list_push(triangle_t *triangle, triangle_list_t *list);
+  triangle_t *triangle_list_pop(triangle_list_t *list);
+  void triangle_list_insert(triangle_t *triangle, triangle_list_t *list);
+  triangle_t *triangle_list_extract(triangle_list_t *list);
+  triangle_t *triangle_list_glimpse(int i, triangle_list_t *list);
+  triangle_t *triangle_list_pick(int i, triangle_list_t *list);
+  void triangle_list_put(triangle_t *tri, int i, triangle_list_t *list);
+#define triangle_list_exchange(i, j, list) dlist_exchange(i, j, (dlist_t *)(list))
+  int triangle_list_query(triangle_t *tri, triangle_list_t *list);
+  void triangle_list_delete(triangle_list_t *list);
+  void triangle_list_destroy(triangle_list_t *list);
+
+  typedef point_list_t polygon_t;
+
+#define polygon_new() (polygon_t *)point_list_new()
+#define polygon_inc_ref(p) ((p)->reference++)
+#define polygon_dec_ref(p) ((p)->reference--)
+#define polygon_get_ref(p) ((p)->reference)
+#define polygon_get_count(polygon) ((polygon)->count)
+#define polygon_copy(copyer, copee) point_list_copy((point_list_t *)(copyer), (point_list_t *)(copee))
+#define polygon_new_and_copy(polygon) (polygon_t *)point_list_new_and_copy((point_list_t *)(polygon))
+#define polygon_push(point, polygon) point_list_push(point, (point_list_t *)(polygon))
+#define polygon_pop(polygon) point_list_pop((point_list_t *)(polygon))
+#define polygon_insert(point, polygon) point_list_insert(point, (point_list_t *)(polygon))
+#define polygon_extract(polygon) point_list_extract((point_list_t *)(polygon))
+#define polygon_glimpse(i, polygon) point_list_glimpse(i, (point_list_t *)(polygon))
+#define polygon_pick(i, polygon) point_list_pick(i, (point_list_t *)(polygon))
+#define polygon_exchange(i, j, polygon) point_list_exchange(i, j, (point_list_t *)(polygon))
+#define polygon_put(point, i, polygon) point_list_put(point, i, (point_list_t *)(polygon))
+#define polygon_query(p, polygon) point_list_query(p, (point_list_t *)(polygon))
+#define polygon_delete(polygon) point_list_delete((point_list_t *)polygon)
+#define polygon_destroy(polygon) point_list_destroy((point_list_t *)(polygon))
+
+  int point_in_polygon(point_t *p, polygon_t *polygon);
+  int is_in_polygon(int x, int y, polygon_t *polygon);
+  int intersect_point_between_lines(point_t *p, line_t *l, line_t *m);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __GEOMETRY_H__ */

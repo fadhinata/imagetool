@@ -1,0 +1,1414 @@
+/*
+ Copyright 2011 Hoyoung Yi.
+
+ This program is free software; you can redistribute it and/or modify it
+ under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+ License for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with this program; if not, please visit www.gnu.org.
+*/
+#include <stdio.h>
+#include <malloc.h>
+#include <assert.h>
+#include <math.h>
+#include <string.h>
+
+#include <geometry.h>
+#include <dlink.h>
+#include <vector.h>
+
+real_t arctan2r(real_t dy, real_t dx)
+{
+  real_t ang = atan2r(dy, dx);
+  return ang < 0.0 ? ang + 2*M_PI : ang;
+}
+
+point_t *point_new(void)
+{
+  point_t *point;
+
+  point = malloc(sizeof(point_t));
+  assert(point);
+
+  memset(point, 0, sizeof(point_t));
+
+  return point;
+}
+
+void point_assign(point_t *point, real_t x, real_t y, real_t z)
+{
+  assert(point);
+
+  point->x = x;
+  point->y = y;
+  point->z = z;
+}
+
+point_t *point_new_and_assign(real_t x, real_t y, real_t z)
+{
+  point_t *point;
+
+  point = point_new();
+  point_assign(point, x, y, z);
+
+  return point;
+}
+
+void point_copy(point_t *copyer, point_t *copee)
+{
+  assert(copyer);
+  assert(copee);
+
+  copyer->x = copee->x;
+  copyer->y = copee->y;
+  copyer->z = copee->z;
+}
+
+int point_cmp(point_t *a, point_t *b)
+{
+  assert(a);
+  assert(b);
+
+  if (abs(a->x - b->x) < REAL_EPSILON &&
+      abs(a->y - b->y) < REAL_EPSILON &&
+      abs(a->z - b->z) < REAL_EPSILON) return 0;
+
+  return -1;
+}
+
+point_t *point_new_and_copy(point_t *copee)
+{
+  point_t *copyer;
+
+  assert(copee);
+
+  copyer = point_new();
+  point_copy(copyer, copee);
+
+  return copyer;
+}
+
+void point_dump(point_t *point)
+{
+  assert(point);
+
+  printf("point: (%.2lf,%.2lf,%.2lf)\n", point->x, point->y, point->z);
+}
+
+void point_destroy(point_t *point)
+{
+  assert(point);
+
+  if (point->reference <= 0) free(point);
+  else point->reference--;
+}
+
+void point_add(point_t *c, point_t *a, point_t *b)
+{
+  assert(c);
+  assert(a);
+  assert(b);
+
+  c->x = a->x + b->x;
+  c->y = a->y + b->y;
+  c->z = a->z + b->z;
+}
+
+void point_subtract(point_t *c, point_t *a, point_t *b)
+{
+  assert(c);
+  assert(a);
+  assert(b);
+
+  c->x = a->x - b->x;
+  c->y = a->y - b->y;
+  c->z = a->z - b->z;
+}
+
+real_t point_distance(point_t *point)
+{
+  real_t dist;
+
+  assert(point);
+
+  dist = sqrt(sqr(point->x) + sqr(point->y) + sqr(point->z));
+
+  return dist;
+}
+
+real_t point_dotproduct(point_t *a, point_t *b)
+{
+  assert(a);
+  assert(b);
+
+  return (a->x * b->x + a->y * b->y + a->z * b->z);
+}
+
+void point_xproduct(point_t *c, point_t *a, point_t *b)
+{
+  assert(c);
+  assert(a);
+  assert(b);
+
+  c->x = (a->y * b->z) - (a->z * b->y);
+  c->y = (a->z * b->x) - (a->x * b->z);
+  c->z = (a->x * b->y) - (a->y * b->x);
+}
+
+void point_list_copy(point_list_t *copyer, point_list_t *copee)
+{
+  dlink_t *a, *b;
+
+  assert(copyer);
+  assert(copee);
+  assert(copyer->count == copee->count);
+
+  a = copyer->tail->next;
+  for (b = copee->tail->next; b != copee->head; b = b->next) {
+    point_copy((point_t *)a->object, (point_t *)b->object);
+    a = a->next;
+  }
+}
+
+point_list_t *point_list_new_and_copy(point_list_t *list)
+{
+  dlink_t *a, *b;
+  point_list_t *ret;
+  point_t *p;
+
+  assert(list);
+
+  ret = (point_list_t *)dlist_new();
+
+  for (a = list->tail->next; a != list->head; a = a->next) {
+    p = point_new_and_copy((point_t *)a->object);
+    p->reference++;
+    b = dlink_new();
+    b->object = (void *)p;
+    dlist_insert(b, (dlist_t *)ret);
+  }
+
+  return ret;
+}
+
+void point_list_push(point_t *point, point_list_t *list)
+{
+  dlink_t *link;
+
+  assert(point);
+  assert(list);
+
+  point->reference++;
+  link = dlink_new();
+  link->object = (void *)point;
+  dlist_push(link, list);
+}
+
+point_t *point_list_pop(point_list_t *list)
+{
+  dlink_t *link;
+  point_t *p;
+
+  assert(list);
+
+  link = dlist_pop((dlist_t *)list);
+  p = (point_t *)link->object;
+  p->reference--;
+  dlink_destroy(link);
+
+  return p;
+}
+
+void point_list_insert(point_t *point, point_list_t *list)
+{
+  dlink_t *link;
+
+  assert(point);
+  assert(list);
+
+  point->reference++;
+  link = dlink_new();
+  link->object = (void *)point;
+  dlist_insert(link, list);
+}
+
+point_t *point_list_extract(point_list_t *list)
+{
+  dlink_t *link;
+  point_t *p;
+
+  assert(list);
+
+  link = dlist_extract((dlist_t *)list);
+  p = (point_t *)link->object;
+  p->reference--;
+  dlink_destroy(link);
+
+  return p;
+}
+
+point_t *point_list_glimpse(int i, point_list_t *list)
+{
+  dlink_t *link;
+  point_t *point;
+
+  assert(list);
+  assert(0 <= i && i < point_list_get_count(list));
+
+  link = dlist_glimpse(i, (dlist_t *)list);
+  point = (point_t *)link->object;
+
+  return point;
+}
+
+point_t *point_list_pick(int i, point_list_t *list)
+{
+  dlink_t *link;
+  point_t *point;
+
+  assert(list);
+  assert(0 <= i && i < point_list_get_count(list));
+
+  link = dlist_pick(i, (dlist_t *)list);
+  point = (point_t *)link->object;
+  point->reference--;
+  dlink_destroy(link);
+
+  return point;
+}
+
+void point_list_put(point_t *point, int i, point_list_t *list)
+{
+  dlink_t *link;
+
+  assert(point);
+  assert(list);
+  assert(0 <= i && i < point_list_get_count(list));
+
+  point->reference++;
+  link = dlink_new();
+  link->object = (void *)point;
+  dlist_put(link, i, list);
+}
+
+int point_list_query(point_t *p, point_list_t *list)
+{
+  int i;
+  dlink_t *x;
+
+  assert(p);
+  assert(list);
+
+  i = 0;
+  for (x = list->tail->next; x != list->head; x = x->next) {
+    if (point_cmp(p, (point_t *)x->object) == 0)
+      return i;
+    i++;
+  }
+
+  return -1;
+}
+
+void point_list_delete(point_list_t *list)
+{
+  dlink_t *link;
+  point_t *p;
+
+  assert(list);
+
+  for (link = list->tail->next; link != list->head; link = link->next) {
+    p = (point_t *)link->object;
+    p->reference--;
+  }
+}
+
+void point_list_destroy(point_list_t *list)
+{
+  dlink_t *link;
+
+  assert(list);
+
+  if (list->reference <= 0) {
+    while (point_list_get_count(list)) {
+      link = dlist_pop((dlist_t *)list);
+      point_destroy((point_t *)link->object);
+      dlink_destroy(link);
+    }
+    dlist_destroy((dlist_t *)list);
+  } else list->reference--;
+}
+
+vector_t *cvector_new_and_copy_point_list(point_list_t *list)
+{
+  int i;
+  vector_t *vec;
+  dlink_t *link;
+  point_t *p;
+
+  assert(list);
+
+  i = 0;
+  vec = vector_new(point_list_get_count(list), true);
+  for (link = list->tail->next; link != list->head; link = link->next) {
+    p = (point_t *)link->object;
+    vector_put_value(p->x, i, vec);
+    ivector_put_value(p->y, i, vec);
+    i++;
+  }
+
+  return vec;
+}
+
+void point_list_copy_cvector(point_list_t *list, vector_t *vec)
+{
+  int i;
+  dlink_t *link;
+  point_t *p;
+
+  assert(list);
+  assert(vec);
+  assert(vector_get_length(vec) == point_list_get_count(list));
+
+  i = 0;
+  for (link = list->tail->next; link != list->head; link = link->next) {
+    p = (point_t *)link->object;
+    p->x = vector_get_value(i, vec);
+    p->y = ivector_get_value(i, vec);
+    i++;
+  }
+}
+
+real_t parallelogram_area_of_3points(point_t *a, point_t *o, point_t *b)
+{
+  real_t area;
+  point_t *p, *q, *r;
+
+  assert(a);
+  assert(o);
+  assert(b);
+
+  p = point_new();
+  q = point_new();
+  r = point_new();
+
+  point_subtract(p, a, o);
+  point_subtract(q, b, o);
+  point_xproduct(r, p, q);
+
+  area = point_distance(r);
+
+  point_destroy(r);
+  point_destroy(q);
+  point_destroy(p);
+
+  return area;
+}
+
+real_t distance_between_points(point_t *a, point_t *b)
+{
+  real_t dist;
+  point_t *ab;
+
+  assert(a);
+  assert(b);
+
+  ab = point_new();
+  point_subtract(ab, b, a);
+  dist = point_distance(ab);
+  point_destroy(ab);
+
+  return dist;
+}
+
+// return value: [0, pi]
+real_t angle_between_points(point_t *a, point_t *b)
+{
+  real_t rad;
+
+  assert(a);
+  assert(b);
+
+  rad = acosr(point_dotproduct(a, b) / (point_distance(a) * point_distance(b)));
+
+  return rad;
+}
+
+real_t angle_among_points(point_t *a, point_t *o, point_t *b)
+{
+  real_t rad;
+  point_t *p, *q;
+
+  assert(a);
+  assert(o);
+  assert(b);
+
+  p = point_new();
+  q = point_new();
+
+  point_subtract(p, a, o);
+  point_subtract(q, b, o);
+
+  rad = angle_between_points(p, q);
+
+  point_destroy(q);
+  point_destroy(p);
+
+  return rad;
+}
+
+line_t *line_new(void)
+{
+  line_t *line;
+
+  line = malloc(sizeof(line_t));
+  assert(line);
+
+  memset(line, 0, sizeof(line_t));
+
+  return line;
+}
+
+void line_assign(line_t *line, point_t *a, point_t *b)
+{
+  assert(line);
+  assert(a);
+  assert(b);
+
+  a->reference++;
+  b->reference++;
+  
+  line->a = a;
+  line->b = b;
+}
+
+line_t *line_new_and_assign(point_t *a, point_t *b)
+{
+  line_t *line;
+
+  assert(a);
+  assert(b);
+
+  line = line_new();
+  line_assign(line, a, b);
+
+  return line;
+}
+
+void line_copy(line_t *copyer, line_t *copee)
+{
+  assert(copyer);
+  assert(copee);
+
+  point_copy(copyer->a, copee->a);
+  point_copy(copyer->b, copee->b);
+}
+
+line_t *line_new_and_copy(line_t *copee)
+{
+  line_t *line;
+  point_t *a, *b;
+
+  assert(copee);
+
+  line = line_new();
+  a = point_new_and_copy(copee->a);
+  b = point_new_and_copy(copee->b);
+  line_assign(line, a, b);
+
+  return line;
+}
+
+real_t line_length(line_t *line)
+{
+  assert(line);
+
+  return sqrt(sqr(line->a->x - line->b->x) + sqr(line->a->y - line->b->y) + sqr(line->a->z - line->b->z));
+}
+
+int line_cmp(line_t *x, line_t *y)
+{
+  assert(x);
+  assert(y);
+
+  if (point_cmp(x->a, y->a) == 0) {
+    if (point_cmp(x->b, y->b) == 0) return 0;
+  } else if (point_cmp(x->a, y->b) == 0) {
+    if (point_cmp(x->b, y->a) == 0) return 0;
+  }
+  return -1;
+}
+
+void line_dump(line_t *line)
+{
+  assert(line);
+
+  printf("line: a(%.2lf,%.2lf,%.2lf) b(%.2lf,%.2lf,%.2lf)\n", line->a->x, line->a->y, line->a->z, line->b->x, line->b->y, line->b->z);
+}
+
+void line_delete(line_t *line)
+{
+  assert(line);
+
+  line->a->reference--;
+  line->b->reference--;
+}
+
+void line_destroy(line_t *line)
+{
+  assert(line);
+
+  if (line->reference <= 0) {
+    point_destroy(line->a);
+    point_destroy(line->b);
+    free(line);
+  } else line->reference--;
+}
+
+void line_list_copy(line_list_t *copyer, line_list_t *copee)
+{
+  dlink_t *a, *b;
+
+  assert(copyer);
+  assert(copee);
+  assert(line_list_get_count(copyer) == line_list_get_count(copee));
+
+  a = copyer->tail->next;
+  for (b = copee->tail->next; b != copee->head; b = b->next) {
+    line_copy((line_t *)a->object, (line_t *)b->object);
+    a = a->next;
+  }
+}
+
+line_list_t *line_list_new_and_copy(line_list_t *copee)
+{
+  dlink_t *a, *b;
+  line_list_t *ret;
+  line_t *p;
+
+  assert(copee);
+
+  ret = (line_list_t *)dlist_new();
+
+  for (a = copee->tail->next; a != copee->head; a = a->next) {
+    b = dlink_new();
+    p = line_new_and_copy((line_t *)a->object);
+    p->reference++;
+    b->object = (void *)p;
+    dlist_insert(b, (dlist_t *)ret);
+  }
+  return ret;
+}
+
+void line_list_push(line_t *line, line_list_t *list)
+{
+  dlink_t *link;
+
+  assert(line);
+  assert(list);
+
+  line->reference++;
+  link = dlink_new(), link->object = (void *)line;
+  dlist_push(link, (dlist_t *)list);
+}
+
+line_t *line_list_pop(line_list_t *list)
+{
+  dlink_t *link;
+  line_t *line;
+
+  assert(list);
+
+  link = dlist_pop((dlist_t *)list);
+  line = (line_t *)link->object;
+  line->reference--;
+  dlink_destroy(link);
+
+  return line;
+}
+
+void line_list_insert(line_t *line, line_list_t *list)
+{
+  dlink_t *link;
+
+  assert(line);
+  assert(list);
+
+  line->reference++;
+  link = dlink_new(), link->object = (void *)line;
+  dlist_insert(link, (dlist_t *)list);
+}
+
+line_t *line_list_extract(line_list_t *list)
+{
+  dlink_t *link;
+  line_t *line;
+
+  assert(list);
+
+  link = dlist_extract((dlist_t *)list);
+  line = (line_t *)link->object;
+  line->reference--;
+  dlink_destroy(link);
+
+  return line;
+}
+
+line_t *line_list_glimpse(int i, line_list_t *list)
+{
+  dlink_t *link;
+  line_t *line;
+
+  assert(list);
+  assert(i >= 0 && i < line_list_get_count(list));
+
+  link = dlist_glimpse(i, (dlist_t *)list);
+  line = (line_t *)link->object;
+
+  return line;
+}
+
+line_t *line_list_pick(int i, line_list_t *list)
+{
+  dlink_t *link;
+  line_t *line;
+
+  assert(list);
+  assert(i >= 0 && i < line_list_get_count(list));
+
+  link = dlist_pick(i, (dlist_t *)list);
+  line = (line_t *)link->object;
+  line->reference--;
+  dlink_destroy(link);
+
+  return line;
+}
+
+void line_list_put(line_t *line, int i, line_list_t *list)
+{
+  dlink_t *link;
+
+  assert(line);
+  assert(list);
+  assert(i >= 0 && i < line_list_get_count(list));
+
+  line->reference++;
+  link = dlink_new(), link->object = (void *)line;
+  dlist_put(link, i, list);
+}
+
+int line_list_query(line_t *line, line_list_t *list)
+{
+  int i;
+  dlink_t *x;
+
+  assert(line);
+  assert(list);
+
+  for (i = 0, x = list->tail->next; x != list->head; x = x->next) {
+    if (line_cmp(line, (line_t *)x->object) == 0)
+      return i;
+    i++;
+  }
+
+  return -1;
+}
+
+void line_list_delete(line_list_t *list)
+{
+  dlink_t *link;
+  line_t *line;
+
+  assert(list);
+
+  for (link = list->tail->next; link != list->head; link = link->next) {
+    line = (line_t *)link->object;
+    line->reference--;
+  }
+}
+
+void line_list_destroy(line_list_t *list)
+{
+  dlink_t *link;
+
+  assert(list);
+
+  if (list->reference <= 0) {
+    while (list->count) {
+      link = dlist_pop((dlist_t *)list);
+      line_destroy((line_t *)link->object);
+      dlink_destroy(link);
+    }
+    dlist_destroy((dlist_t *)list);
+  } else list->reference--;
+}
+
+triangle_t *triangle_new(void)
+{
+  triangle_t *triangle;
+
+  triangle = malloc(sizeof(triangle_t));
+  assert(triangle);
+  memset(triangle, 0, sizeof(triangle_t));
+
+  return triangle;
+}
+
+void triangle_assign(triangle_t *triangle, point_t *a, point_t *b, point_t *c)
+{
+  assert(triangle);
+  assert(a);
+  assert(b);
+  assert(c);
+
+  a->reference++;
+  b->reference++;
+  c->reference++;
+
+  triangle->a = a;
+  triangle->b = b;
+  triangle->c = c;
+}
+
+triangle_t *triangle_new_and_assign(point_t *a, point_t *b, point_t *c)
+{
+  triangle_t *triangle;
+
+  assert(a);
+  assert(b);
+  assert(c);
+
+  triangle = triangle_new();
+  triangle_assign(triangle, a, b, c);
+
+  return triangle;
+}
+
+void triangle_copy(triangle_t *copyer, triangle_t *copee)
+{
+  assert(copyer);
+  assert(copee);
+
+  point_copy(copyer->a, copee->a);
+  point_copy(copyer->b, copee->b);
+  point_copy(copyer->c, copee->c);
+}
+
+triangle_t *triangle_new_and_copy(triangle_t *copee)
+{
+  triangle_t *tri;
+  point_t *p;
+
+  assert(copee);
+
+  tri = triangle_new();
+  p = point_new_and_copy(copee->a);
+  p->reference++;
+  tri->a = p;
+  p = point_new_and_copy(copee->b);
+  p->reference++;
+  tri->b = p;
+  p = point_new_and_copy(copee->c);
+  p->reference++;
+  tri->c = p;
+
+  return tri;
+}
+
+int triangle_cmp(triangle_t *x, triangle_t *y)
+{
+  assert(x);
+  assert(y);
+
+  if (point_cmp(x->a, y->a) == 0) {
+    if (point_cmp(x->b, y->b) == 0) {
+      if (point_cmp(x->c, y->c) == 0) return 0;
+    } else if (point_cmp(x->b, y->c) == 0) {
+      if (point_cmp(x->c, y->b) == 0) return 0;
+    }
+  } else if (point_cmp(x->a, y->b) == 0) {
+    if (point_cmp(x->b, y->a) == 0) {
+      if (point_cmp(x->c, y->c) == 0) return 0;
+    } else if (point_cmp(x->b, y->c) == 0) {
+      if (point_cmp(x->c, y->a) == 0) return 0;
+    }
+  } else if (point_cmp(x->a, y->c) == 0) {
+    if (point_cmp(x->b, y->a) == 0) {
+      if (point_cmp(x->c, y->b) == 0) return 0;
+    } else if (point_cmp(x->b, y->b) == 0) {
+      if (point_cmp(x->c, y->a) == 0) return 0;
+    }
+  }
+  return -1;
+}
+
+void triangle_dump(triangle_t *tri)
+{
+  assert(tri);
+  printf("triangle: a(%.2lf,%.2lf,%.2lf) b(%.2lf,%.2lf,%.2lf) c(%.2lf,%.2lf,%.2lf)\n", tri->a->x, tri->a->y, tri->a->z, tri->b->x, tri->b->y, tri->b->z, tri->c->x, tri->c->y, tri->c->z);
+}
+
+real_t area_of_3_points(point_t *A, point_t *B, point_t *C)
+{
+  real_t a, b, c, s;
+
+  assert(A);
+  assert(B);
+  assert(C);
+  a = distance_between_points(B, C);
+  b = distance_between_points(C, A);
+  c = distance_between_points(A, B);
+  s = (a + b + c) / 2;
+
+  return sqrt(s * (s - a) * (s - b) * (s - c));
+}
+
+/* By Heron's formula, the area of the triangle
+   sqrt(s*(s-a)*(s-b)*(s-c)), s: (a+b+c)/2 */
+real_t triangle_area(triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  return sqrt(s * (s - a) * (s - b) * (s - c));
+}
+
+real_t triangle_circumradius(triangle_t *tri)
+{
+  real_t s, a, b, c, area;
+
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  area = sqrt(s * (s - a) * (s - b) * (s - c));
+  assert(area != 0);
+
+  return ((a * b * c) / (4 * area));
+}
+
+/* tri : given triangle
+ * circumcenter : the center of circumscribed-circle
+ * return value : the radius of circumscribed-circle */
+real_t triangle_circumcircle(point_t *circumcenter, triangle_t *tri)
+{
+  real_t area, a, b, c, s;
+  real_t alpha, beta, gamma;
+  point_t *d1, *d2;
+
+  assert(circumcenter);
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+  area = sqrt(s * (s - a) * (s - b) * (s - c));
+
+  d1 = point_new();
+  d2 = point_new();
+
+  point_subtract(d1, tri->a, tri->b);
+  point_subtract(d2, tri->a, tri->c);
+  alpha = sqr(a) * point_dotproduct(d1, d2) / (2 * sqr(2*area));
+  
+  point_subtract(d1, tri->b, tri->a);
+  point_subtract(d2, tri->b, tri->c);
+  beta = sqr(b) * point_dotproduct(d1, d2) / (2 * sqr(2*area));
+
+  point_subtract(d1, tri->c, tri->a);
+  point_subtract(d2, tri->c, tri->b);
+  gamma = sqr(c) * point_dotproduct(d1, d2) / (2 * sqr(2*area));
+
+  point_destroy(d2);
+  point_destroy(d1);
+
+  circumcenter->x = alpha * tri->a->x + beta * tri->b->x + gamma * tri->c->x;
+  circumcenter->y = alpha * tri->a->y + beta * tri->b->y + gamma * tri->c->y;
+  circumcenter->z = alpha * tri->a->z + beta * tri->b->z + gamma * tri->c->z;
+
+  return (a * b * c) / (4 * area);
+}
+
+// s : semiperimeter
+// 2 * s : perimeter
+real_t triangle_inradius(triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  return sqrt(((s - a) * (s - b) * (s - c)) / s);
+}
+
+real_t triangle_incircle(point_t *incenter, triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(incenter);
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  incenter->x = (a * tri->a->x + b * tri->b->x + c * tri->c->x) / (2 * s);
+  incenter->y = (a * tri->a->y + b * tri->b->y + c * tri->c->y) / (2 * s);
+  incenter->z = (a * tri->a->z + b * tri->b->z + c * tri->c->z) / (2 * s);
+
+  return sqrt(((s - a) * (s - b) * (s - c)) / s);
+}
+
+real_t triangle_a_exradius(triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  return sqrt((s * (s - b) * (s - c)) / (s - a));
+}
+
+real_t triangle_a_excircle(point_t *excenter, triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(excenter);
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  excenter->x = (-a * tri->a->x + b * tri->b->x + c * tri->c->x) / (-a + b + c);
+  excenter->y = (-a * tri->a->y + b * tri->b->y + c * tri->c->y) / (-a + b + c);
+  excenter->z = (-a * tri->a->z + b * tri->b->z + c * tri->c->z) / (-a + b + c);
+
+  return sqrt((s * (s - b) * (s - c)) / (s - a));
+}
+
+real_t triangle_b_exradius(triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  return sqrt((s * (s - a) * (s - c)) / (s - b));
+}
+
+real_t triangle_b_excircle(point_t *excenter, triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(excenter);
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  excenter->x = (a * tri->a->x - b * tri->b->x + c * tri->c->x) / (a - b + c);
+  excenter->y = (a * tri->a->y - b * tri->b->y + c * tri->c->y) / (a - b + c);
+  excenter->z = (a * tri->a->z - b * tri->b->z + c * tri->c->z) / (a - b + c);
+
+  return sqrt((s * (s - a) * (s - c)) / (s - b));
+}
+
+real_t triangle_c_exradius(triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  return sqrt((s * (s - a) * (s - b)) / (s - c));
+}
+
+real_t triangle_c_excircle(point_t *excenter, triangle_t *tri)
+{
+  real_t s, a, b, c;
+
+  assert(excenter);
+  assert(tri);
+
+  a = distance_between_points(tri->b, tri->c);
+  b = distance_between_points(tri->c, tri->a);
+  c = distance_between_points(tri->a, tri->b);
+  s = (a + b + c) / 2;
+
+  excenter->x = (a * tri->a->x + b * tri->b->x - c * tri->c->x) / (a + b - c);
+  excenter->y = (a * tri->a->y + b * tri->b->y - c * tri->c->y) / (a + b - c);
+  excenter->z = (a * tri->a->z + b * tri->b->z - c * tri->c->z) / (a + b - c);
+
+  return sqrt((s * (s - a) * (s - b)) / (s - c));
+}
+
+void triangle_delete(triangle_t *tri)
+{
+  assert(tri);
+
+  tri->a->reference--;
+  tri->b->reference--;
+  tri->c->reference--;
+}
+
+void triangle_destroy(triangle_t *triangle)
+{
+  assert(triangle);
+
+  if (triangle->reference <= 0) {
+    point_destroy(triangle->a);
+    point_destroy(triangle->b);
+    point_destroy(triangle->c);
+    free(triangle);
+  } else triangle->reference--;  
+}
+
+void triangle_list_copy(triangle_list_t *copyer, triangle_list_t *copee)
+{
+  dlink_t *a, *b;
+
+  assert(copyer);
+  assert(copee);
+  assert(copyer->count == copee->count);
+
+  a = copyer->tail->next;
+  for (b = copee->tail->next; b != copee->head; b = b->next) {
+    triangle_copy((triangle_t *)a->object, (triangle_t *)b->object);
+    a = a->next;
+  }
+}
+
+triangle_list_t *triangle_list_new_and_copy(triangle_list_t *copee)
+{
+  dlink_t *a, *b;
+  triangle_list_t *list;
+  triangle_t *tri;
+
+  assert(copee);
+
+  list = triangle_list_new();
+  for (b = copee->tail->next; b != copee->head; b = b->next) {
+    a = dlink_new();
+    tri = triangle_new_and_copy((triangle_t *)b->object);
+    tri->reference++;
+    a->object = (void *)tri;
+    dlist_insert(a, list);
+  }
+
+  return list;
+}
+
+void triangle_list_push(triangle_t *triangle, triangle_list_t *list)
+{
+  dlink_t *link;
+
+  assert(triangle);
+  assert(list);
+
+  triangle->reference++;
+  link = dlink_new(), link->object = (void *)triangle;
+  dlist_push(link, list);
+}
+
+triangle_t *triangle_list_pop(triangle_list_t *list)
+{
+  dlink_t *link;
+  triangle_t *tri;
+
+  assert(list);
+
+  link = dlist_pop((dlist_t *)list);
+  tri = (triangle_t *)link->object;
+  tri->reference--;
+  dlink_destroy(link);
+
+  return tri;
+}
+
+void triangle_list_insert(triangle_t *triangle, triangle_list_t *list)
+{
+  dlink_t *link;
+
+  assert(triangle);
+  assert(list);
+
+  triangle->reference++;
+  link = dlink_new(), link->object = (void *)triangle;
+  dlist_insert(link, list);
+}
+
+triangle_t *triangle_list_extract(triangle_list_t *list)
+{
+  dlink_t *link;
+  triangle_t *tri;
+
+  assert(list);
+
+  link = dlist_extract((dlist_t *)list);
+  tri = (triangle_t *)link->object;
+  tri->reference--;
+  dlink_destroy(link);
+
+  return tri;
+}
+
+triangle_t *triangle_list_glimpse(int i, triangle_list_t *list)
+{
+  dlink_t *link;
+  triangle_t *triangle;
+
+  assert(list);
+  assert(i >= 0 && i < list->count);
+
+  link = dlist_glimpse(i, (dlist_t *)list);
+  triangle = (triangle_t *)link->object;
+
+  return triangle;
+}
+
+triangle_t *triangle_list_pick(int i, triangle_list_t *list)
+{
+  dlink_t *link;
+  triangle_t *tri;
+
+  assert(list);
+  assert(i >= 0 && i < list->count);
+
+  link = dlist_pick(i, (dlist_t *)list);
+  tri = (triangle_t *)link->object;
+  tri->reference--;
+  dlink_destroy(link);
+
+  return tri;
+}
+
+void triangle_list_put(triangle_t *tri, int i, triangle_list_t *list)
+{
+  dlink_t *link;
+
+  assert(tri);
+  assert(list);
+  assert(i >= 0 && i < list->count);
+
+  tri->reference++;
+  link = dlink_new();
+  link->object = (void *)tri;
+  dlist_put(link, i, list);
+}
+
+int triangle_list_query(triangle_t *tri, triangle_list_t *list)
+{
+  int i;
+  dlink_t *x;
+
+  assert(tri);
+  assert(list);
+
+  for (i = 0, x = list->tail->next; x != list->head; x = x->next) {
+    if (triangle_cmp(tri, (triangle_t *)x->object) == 0) return i;
+    i++;
+  }
+  return -1;
+}
+
+void triangle_list_delete(triangle_list_t *list)
+{
+  dlink_t *link;
+  triangle_t *tri;
+
+  assert(list);
+
+  for (link = list->tail->next; link != list->head; link = link->next) {
+    tri = (triangle_t *)link->object;
+    tri->reference--;
+  }
+}
+
+void triangle_list_destroy(triangle_list_t *list)
+{
+  dlink_t *link;
+
+  assert(list);
+
+  if (list->reference <= 0) {
+    while (list->count > 0) {
+      link = dlist_pop((dlist_t *)list);
+      triangle_destroy((triangle_t *)link->object);
+      dlink_destroy(link);
+    }
+    free(list);
+  } else list->reference--;
+}
+
+int is_in_polygon(int x, int y, polygon_t *polygon)
+{
+  int i, inside = 0;
+  point_t *old, *new;
+  point_t *left, *right;
+
+  assert(polygon);
+  assert(polygon->count >= 3);
+
+  old = polygon_glimpse(polygon->count - 1, polygon);
+  for (i = 0; i < polygon->count; i++) {
+    new = polygon_glimpse(i, polygon);
+    if (new->x > old->x) {
+      left = old; right = new;
+    } else {
+      left = new; right = old;
+    }
+    if (((new->x < x) == (x <= old->x)) &&  /* edge "open" at left end */
+	((y - left->y) * (right->x - left->x) < (right->y - left->y) * (x - left->x))) {
+      inside = !inside;
+    }
+    old = new;
+  }
+  return inside;
+}
+
+int point_in_polygon(point_t *p, polygon_t *polygon)
+{
+  int i, inside = 0;
+  point_t *old, *new;
+  point_t *left, *right;
+
+  assert(p);
+  assert(polygon);
+  assert(polygon->count >= 3);
+
+  old = polygon_glimpse(polygon->count - 1, polygon);
+  for (i = 0; i < polygon->count; i++) {
+    new = polygon_glimpse(i, polygon);
+    if (new->x > old->x) {
+      left = old; right = new;
+    } else {
+      left = new; right = old;
+    }
+    if (((new->x < p->x) == (p->x <= old->x)) &&  /* edge "open" at left end */
+	((p->y - left->y) * (right->x - left->x) < (right->y - left->y) * (p->x - left->x))) {
+      inside = !inside;
+    }
+    old = new;
+  }
+  return inside;
+}
+
+int intersect_point_between_lines(point_t *p, line_t *l, line_t *m)
+{
+  real_t denom, ua, ub;
+
+  assert(p);
+  assert(l);
+  assert(m);
+
+  // Pl = l->a + Ua * (l->b - l->a)
+  // Pm = m->a + Ub * (m->b - m->a)
+  // for Pl = Pm
+  denom = (m->b->y - m->a->y) * (l->b->x - l->a->x) - (m->b->x - m->a->x) * (l->b->y - l->a->y);
+  ua = (m->b->x - m->a->x) * (l->a->y - m->a->y) - (m->b->y - m->a->y) * (l->a->x - m->a->x);
+  ub = (l->b->x - l->a->x) * (l->a->y - m->a->y) - (l->b->y - l->a->y) * (l->a->x - m->a->x);
+
+  if (abs(denom) < REAL_EPSILON) {
+    if (abs(ua) < REAL_EPSILON && abs(ub) < REAL_EPSILON)
+      return 0; // COINCIDENT
+    return -1; // PARALLEL
+  }
+
+  ua = ua / denom;
+  ub = ub / denom;
+
+  if (ua < 0 || ua > 1 || ub < 0  || ub > 1)
+    return -2; // Not intersecting
+
+  p->x = l->a->x + ua * (l->b->x - l->a->x);
+  p->y = l->a->y + ua * (l->b->y - l->a->y);
+  /*
+  if (point_cmp(l->a, m->a) == 0 ||
+      point_cmp(l->a, m->b) == 0 ||
+      point_cmp(l->b, m->a) == 0 ||
+      point_cmp(l->b, m->b) == 0) return 2;
+  */
+  if ((abs(ua) < REAL_EPSILON || abs(ua - 1.0) < REAL_EPSILON) ||
+      (abs(ub) < REAL_EPSILON || abs(ub - 1.0) < REAL_EPSILON))
+    return 2; // ENDPOINT
+
+  return 1; // INTERSECTING
+}
+
+#if 0
+int intersect_point_of_lines(point_t *p, line_t *q, line_t *r)
+{
+  real_t denom, ua, ub;
+
+  assert(p);
+  assert(q);
+  assert(r);
+
+  denom = (r->b->y - r->a->y) * (q->b->x - q->a->x) - (r->b->x - r->a->x) * (q->b->y - q->b->y);
+  ua = (r->b->x - r->a->x) * (q->a->y - r->a->y) - (r->b->y - r->a->y) * (q->a->x - r->a->x);
+  ub = (q->b->x - q->a->x) * (q->a->y - r->a->y) - (q->b->y - q->a->y) * (q->a->x - r->a->x);
+
+  if (denom == 0.0) {
+    if (ua == 0.0 && ub == 0.0) return -1; /* COINCIDENT */
+    return -2; /* Parallel */
+  }
+
+  ua = ua/denom;
+  ub = ub/denom;
+
+  if (ua >= 0.0 && ua <= 1.0 && ub >= 0.0 && ub <= 1.0) {
+    if (abs(q->a->x - q->b->x) < abs(r->a->x - r->b->x)) {
+      p->x = q->a->x + ua * (q->b->x - q->a->x);
+    } else {
+      p->x = r->a->x + ub * (r->b->x - r->a->x);
+    }
+    if (abs(q->a->y - q->b->y) < abs(r->a->y - r->b->y)) {
+      p->y = q->a->y + ua * (q->b->y - q->a->y);
+    } else {
+      p->y = r->a->y + ub * (r->b->y - r->a->y);
+    }
+    if (ua <= 0.0000001 || ub <= 0.0000001) return 1; // endpoint
+    return 0; /* intersecting */
+  }
+  //  p->x = x1+ua*(x2-x1);
+  //  p->y = y1+ub*(y2-y1);
+  return -3; /* not intersecting */  
+}
+#endif
