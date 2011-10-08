@@ -37,7 +37,9 @@ LDFLAGS = $(LIBS)
 TARGET = imagetool
 
 INCS = -I.
+ifeq ($(GLIB), WINBGIM)
 INCS += -IWinBGIm_Library6_0_Nov2005
+endif
 INCS += -Ipixmap
 INCS += -Ibuffering
 INCS += -Iconvert
@@ -60,6 +62,7 @@ INCS += -Ispline
 INCS += -Iwavelet
 INCS += -Iregion_growing
 INCS += -Itransform
+INCS += -Iinterface
 
 CSRC = bmp.c
 CSRC += buffering/dlink.c
@@ -131,6 +134,7 @@ CSRC += transform/fourier.c
 CSRC += wavelet/daub4.c
 CSRC += wavelet/haar.c
 CSRC += wavelet/wavelet.c
+CSRC += interface/screen.c
 #CSRC += examples/dt_wshed.c
 
 # Define all object files.
@@ -164,6 +168,7 @@ clean_list :
 	$(RM) $(TARGET)
 	$(RM) $(COBJ) $(CPPOBJ)
 	$(RM) $(CSRC:.c=.c~) $(CPPSRC:.cpp=.cpp~)
+	$(RM) $(CSRC:.c=.h~) $(CPPSRC:.cpp=.h~)
 	$(RMDIR) .dep | exit 0
 
 # Include the dependency files.
@@ -171,3 +176,4 @@ clean_list :
 
 # Listing of phony targets.
 .PHONY : all build exe clean clean_list
+

@@ -29,7 +29,7 @@
  * blending function : (n! / (k! * (n - k)!)) * u^k * (1 - u)^(n - k) */
 void point_list_create_bezier_spline(point_list_t *bezier, int nbezier, point_list_t *controls)
 {
-  int i, j, k, c, n;
+  int i, k, c, n;
   int nctrl;
   real_t mu, blending;
   point_t *p, *q;

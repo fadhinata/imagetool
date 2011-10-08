@@ -30,30 +30,30 @@ complex_t cvector_get_mean(vector_t *vec)
   assert(vec);
 
   mean = cvector_get_sum(vec);
-  mean.real /= (double)vector_get_length(vec);
-  mean.imag /= (double)vector_get_length(vec);
+  mean.real /= (real_t)vector_get_length(vec);
+  mean.imag /= (real_t)vector_get_length(vec);
 
   return mean;
 }
 
-double vector_get_2nd_moment(vector_t *vec, double org)
+real_t vector_get_2nd_moment(vector_t *vec, real_t org)
 {
-  double moment;
+  real_t moment;
   vector_t *tmp;
 
   assert(vec);
 
   tmp = vector_new_and_copy(vec);
   vector_copy_vector_subtract_scalar(tmp, vec, org);
-  moment = vector_get_norm(tmp) / (double)vector_get_length(tmp);
+  moment = vector_get_norm(tmp) / (real_t)vector_get_length(tmp);
   vector_destroy(tmp);
 
   return moment;
 }
 
-double ivector_get_2nd_moment(vector_t *vec, double org)
+real_t ivector_get_2nd_moment(vector_t *vec, real_t org)
 {
-  double moment;
+  real_t moment;
   vector_t *tmp;
 
   assert(vec);
@@ -77,8 +77,8 @@ complex_t cvector_get_2nd_moment(vector_t *vec, complex_t org)
   tmp = vector_new_and_copy(vec);
   cvector_copy_cvector_subtract_scalar(tmp, vec, org);
   moment = cvector_get_norm(tmp);
-  moment.real /= (double)vector_get_length(tmp);
-  moment.imag /= (double)vector_get_length(tmp);
+  moment.real /= (real_t)vector_get_length(tmp);
+  moment.imag /= (real_t)vector_get_length(tmp);
   vector_destroy(tmp);
 
   return moment;
@@ -101,7 +101,7 @@ complex_t cvector_get_standard_deviation(vector_t *vec)
   return std;
 }
 
-int vector_read_moments(double *scnd, double *thrd, double *frth, vector_t *vec, double org)
+int vector_read_moments(real_t *scnd, real_t *thrd, real_t *frth, vector_t *vec, real_t org)
 {
   vector_t *moment, *diff;
 
@@ -127,7 +127,7 @@ int vector_read_moments(double *scnd, double *thrd, double *frth, vector_t *vec,
   return vector_get_length(vec);
 }
 
-int ivector_read_moments(double *scnd, double *thrd, double *frth, vector_t *vec, double org)
+int ivector_read_moments(real_t *scnd, real_t *thrd, real_t *frth, vector_t *vec, real_t org)
 {
   vector_t *moment, *diff;
 
@@ -170,13 +170,13 @@ int cvector_read_moments(complex_t *scnd, complex_t *thrd, complex_t *frth, vect
 
   n = vector_get_length(vec);
   *scnd = cvector_get_sum(moment);
-  scnd->real /= (double)n, scnd->imag /= (double)n;
+  scnd->real /= (real_t)n, scnd->imag /= (real_t)n;
   cvector_multiply_cvector(moment, diff);
   *thrd = cvector_get_sum(moment);
-  thrd->real /= (double)n, thrd->imag /= (double)n;
+  thrd->real /= (real_t)n, thrd->imag /= (real_t)n;
   cvector_multiply_cvector(moment, diff);
   *frth = cvector_get_sum(moment);
-  frth->real /= (double)n, frth->imag /= (double)n;
+  frth->real /= (real_t)n, frth->imag /= (real_t)n;
 
   vector_destroy(diff);
   vector_destroy(moment);
@@ -184,9 +184,9 @@ int cvector_read_moments(complex_t *scnd, complex_t *thrd, complex_t *frth, vect
   return n;
 }
 
-double vector_get_skewness(vector_t *vec)
+real_t vector_get_skewness(vector_t *vec)
 {
-  double r2, r3, r4, std;
+  real_t r2, r3, r4, std;
 
   assert(vec);
 
@@ -196,9 +196,9 @@ double vector_get_skewness(vector_t *vec)
   return r3 / (std * std * std);
 }
 
-double ivector_get_skewness(vector_t *vec)
+real_t ivector_get_skewness(vector_t *vec)
 {
-  double r2, r3, r4, std;
+  real_t r2, r3, r4, std;
 
   assert(vec);
 
@@ -227,9 +227,9 @@ complex_t cvector_get_skewness(vector_t *vec)
   return skew;
 }
 
-double vector_get_kurtosis(vector_t *vec)
+real_t vector_get_kurtosis(vector_t *vec)
 {
-  double r2, r3, r4;
+  real_t r2, r3, r4;
 
   assert(vec);
 
@@ -238,9 +238,9 @@ double vector_get_kurtosis(vector_t *vec)
   return r4/(r2*r2);
 }
 
-double ivector_get_kurtosis(vector_t *vec)
+real_t ivector_get_kurtosis(vector_t *vec)
 {
-  double r2, r3, r4;
+  real_t r2, r3, r4;
 
   assert(vec);
 

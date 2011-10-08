@@ -1,383 +1,211 @@
+#include <string.h>
 
-static int image_width = 320;
-static int image_height = 240;
+#include <common.h>
+#include <bitmap.h>
+#include <bytemap.h>
+#include <dwordmap.h>
+#include <mean_smooth.h>
+#include <median_smooth.h>
+#include <histogram.h>
+#include <gamma.h>
+#include <threshold.h>
+#include <backsym.h>
+#include <dsigma.h>
+#include <isodata.h>
+#include <otsu.h>
+#include <triangulate.h>
+#include <labeling.h>
+#include <kirsch.h>
+#include <prewitt.h>
+#include <roberts.h>
+#include <robinson.h>
+#include <scharr.h>
+#include <sobel.h>
+#include <draw_line.h>
+#include <draw_circle.h>
+#include <hough_line.h>
+#include <hough_circle.h>
+#include <convert.h>
+#include <gray.h>
 
-void LibraryTest(void)
+#include <screen.h>
+
+int test_library(int argc, char *argv[])
 {
-	unsigned char *image1;
-	bytemap_t *a, *b, *c, *f;
-	bitmap_t *d;
-	dwordmap_t *e;
-	int *colorpixmap;
-	int i, j, value, pixels;
+  bytemap_t *a, *b, *c, *f, *g;
+  bitmap_t *roi, *bin;
+  dwordmap_t *d;
+  int i, j, value, pixels;
+  long w, h;
 
-    initwindow(image_width, image_height, "ImageTool");
+  hough_line_t *hough_line;
+  hough_circle_t *hough_circle;
+  dwordmap_t *cell;
+  long vmax;
+  int imax, jmax;
+  double r, t, aa, bb, cc;
 
-	// read image in left top
-	readimagefile(NULL, 0, 0, image_width-1, image_height-1);
-	image1 = (unsigned char *)malloc(imagesize(0, 0, image_width-1, image_height-1));
-	assert(image1);
-	getimage(0, 0, image_width-1, image_height-1, image1);
-	a = bytemap_create(image_width, image_height);
-	b = bytemap_create(image_width, image_height);
-	c = bytemap_create(image_width, image_height);
-	d = bitmap_create(image_width, image_height);
-	e = dwordmap_create(image_width, image_height);
-	f = bytemap_create(image_width, image_height);
-	assert(a);
-	assert(b);
-	assert(c);
-	assert(d);
-	assert(e);
-	assert(f);
+  w = strtol(argv[1]);
+  h = strtol(argv[2]);
+
+  initialize_screen(w, h, 32);
+
+  a = bytemap_new(w, h);
+  b = bytemap_new(w, h);
+  c = bytemap_new(w, h);
+
+  d = dwordmap_new(w, h);
+
+  roi = bitmap_new(w, h);
+  bin = bitmap_new(w, h);
+
+  f = bytemap_new(w, h);
+  g = bytemap_new(w, h);
+
+  load_and_display_BMP(argv[3]);
+  read_bytemap_in_screen(a, b, c);
+  wait_keyhit();
+
+  // rgb2gray
+  printf("rgb2gray\n");
+  rgb2gray(g, a, b, c);
+  write_bytemap_to_screen(g, g, g);
+  wait_keyhit();
+
+  // bytemap2rgb
+  printf("bytemap2rgb\n");
+  bytemap2rgb(a, b, c, g);
+  write_bytemap_to_screen(a, b, c);
+  wait_keyhit();
+
+  // mean_smooth
+  printf("mean_smooth\n");
+  mean_smooth(f, g, 4);
+  write_bytemap_to_screen(f, f, f);
+  wait_keyhit();
+
+  // median_smooth
+  printf("median_smooth\n");
+  median_smooth(f, g, 4);
+  write_bytemap_to_screen(f, f, f);
+  wait_keyhit();
 	
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			*(a->buffer+i*a->header.pitch+j) = colorpixmap[i*image_width+j]>>16; // red
-			*(b->buffer+i*b->header.pitch+j) = colorpixmap[i*image_width+j]>>8; // green
-			*(c->buffer+i*c->header.pitch+j) = colorpixmap[i*image_width+j]; // blue
-		}
-	}
-	getch();
+  // histogram_equalize
+  printf("histogram_equalize\n");
+  bytemap_histogram_equalize(f, g);
+  write_bytemap_to_screen(f, f, f);
+  wait_keyhit();
 
-	// rgb2gray
-	printf("rgb2gray\n");
-	rgb2gray(f, a, b, c);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			colorpixmap[i*image_width+j] = ((((int)*(f->buffer+i*f->header.pitch+j))&0xff)<<16)| // red
-										   ((((int)*(f->buffer+i*f->header.pitch+j))&0xff)<<8)| // green
-										   (((int)*(f->buffer+i*f->header.pitch+j))&0xff); // blue
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
+  // gamma_correct
+  printf("gamma_correct\n");
+  bytemap_gamma_correct(f, g, 0.1);
+  write_bytemap_to_screen(f, f, f);
+  wait_keyhit();
 
-	// bytemap2rgb
-	printf("bytemap2rgb\n");
-	bytemap2rgb(a, b, c, f);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			colorpixmap[i*image_width+j] = ((((int)*(a->buffer+i*a->header.pitch+j))&0xff)<<16)| // red
-										   ((((int)*(b->buffer+i*b->header.pitch+j))&0xff)<<8)| // green
-										   (((int)*(c->buffer+i*c->header.pitch+j))&0xff); // blue
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
+  //threshold
+  printf("threshold\n");
+  bytemap_threshold(bin, g, 128, 255);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
+
+  // background symmetric threshold
+  printf("background_symmetry_threshold\n");
+  bytemap_background_symmetry_threshold(bin, g, 0.5);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
+
+  // isodata_threshold
+  printf("isodata_threshold\n");
+  bytemap_isodata_threshold(bin, g);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
+
+  // triangle_threshold
+  printf("triangle_threshold\n");
+  bytemap_triangle_threshold(bin, g);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
+
+  // otsu_threshold
+  printf("otsu_threshold\n");
+  bytemap_otsu_threshold(bin, g);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
+
+  // dominant sigma threshold
+  printf("dominant_sigma_threshold\n");
+  bytemap_dominant_sigma_threshold(bin, g);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
 	
-	// mean_smooth
-	printf("mean_smooth\n");
-	mean_smooth(c, a, 4);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			colorpixmap[i*image_width+j] = ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<16)| // red
-										   ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<8)| // green
-										   (((int)*(c->buffer+i*c->header.pitch+j))&0xff); // blue
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
+  // labeling
+  printf("labeling\n");
+  pixels = labeling(d, NULL, bin, NEIGHBOR_8);
+  dwordmap2rgb(a, b, c, d);
+  write_bytemap_to_screen(a, b, c);
+  wait_keyhit();
+
+  // kirsch_edge
+  printf("kirsch_edge\n");
+  kirsch_edge(bin, g, 350);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
+
+  // prewitt_edge
+  printf("prewitt_edge\n");
+  prewitt_edge(bin, g, 120);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
+
+  // roberts_edge
+  printf("roberts_edge\n");
+  roberts_edge(bin, g, 50);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
 	
-	// median_smooth
-	printf("median_smooth\n");
-	median_smooth(c, a, 4);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			colorpixmap[i*image_width+j] = ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<16)| // red
-										   ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<8)| // green
-										   (((int)*(c->buffer+i*c->header.pitch+j))&0xff); // blue
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
+  // robinson_edge
+  printf("robinson_edge\n");
+  robinson_edge(bin, g, 100);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
 	
-	// histogram_equalize
-	printf("histogram_equalize\n");
-	bytemap_histogram_equalize(c, a);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			colorpixmap[i*image_width+j] = ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<16)| // red
-										   ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<8)| // green
-										   (((int)*(c->buffer+i*c->header.pitch+j))&0xff); // blue
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
+  //scharr_edge
+  printf("scharr_edge\n");
+  scharr_edge(bin, g, 450);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
 
-	// gamma_correct
-	printf("gamma_correct\n");
-	bytemap_gamma_correct(c, a, 0.1);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			colorpixmap[i*image_width+j] = ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<16)| // red
-										   ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<8)| // green
-										   (((int)*(c->buffer+i*c->header.pitch+j))&0xff); // blue
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-	
-	//threshold
-	printf("threshold\n");
-	bytemap_threshold(d, a, 64, 128+64);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
+  // sobel_edge
+  printf("sobel_edge\n");
+  sobel_edge(bin, g, 100);
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
 
-	// background symmetric threshold
-	printf("background_symmetry_threshold\n");
-	bytemap_background_symmetry_threshold(d, a, 0.5);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
+  // line & circle
+  printf("draw_line\n");
+  bytemap_clear(f);
+  bytemap_draw_line(50, 25, w - 100, h - 11, 128, f);
+  bytemap_fast_draw_line(150, 100, w, h - 11, 200, f);
+  draw_circle(150, 100, 50, 255, f);
+  draw_filled_circle(200, 200, 50, 128, f);
+  write_bytemap_to_screen(f, f, f);
+  wait_keyhit();
+  	
+  // hough accumulate
+  hough_line_t *hough_line;
+  dwordmap_t *cell;
+  long vmax;
+  int imax, jmax;
+  double r, t, aa, bb, cc;
 
-
-	// isodata_threshold
-	printf("isodata_threshold\n");
-	bytemap_isodata_threshold(d, a);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// triangle_threshold
-	printf("triangle_threshold\n");
-	bytemap_triangle_threshold(d, a);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// otsu_threshold
-	printf("otsu_threshold\n");
-	bytemap_otsu_threshold(d, a);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// dominant sigma threshold
-	printf("dominant_sigma_threshold\n");
-	bytemap_dominant_sigma_threshold(d, a);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-	
-	// labeling
-	printf("labeling\n");
-	pixels = labeling(e, NULL, NULL, d, NEIGHBOR_8);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(e->buffer+i*e->header.pitch/sizeof(long)+j) != -1) {
-				colorpixmap[i*image_width+j] = (*(e->buffer+i*e->header.pitch/sizeof(long)+j))*0xfffff/(pixels+1)+0xfffff/(pixels+1);
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// kirsch_edge
-	printf("kirsch_edge\n");
-	kirsch_edge(d, a, 350);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// prewitt_edge
-	printf("prewitt_edge\n");
-	prewitt_edge(d, a, 120);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// roberts_edge
-	printf("roberts_edge\n");
-	roberts_edge(d, a, 50);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-	
-	// robinson_edge
-	printf("robinson_edge\n");
-	robinson_edge(d, a, 100);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-	
-	//scharr_edge
-	printf("scharr_edge\n");
-	scharr_edge(d, a, 450);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// sobel_edge
-	printf("sobel_edge\n");
-	sobel_edge(d, a, 100);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			if (*(d->buffer+i*d->header.pitch+(j>>3)) & (1<<(j%8))) {
-				colorpixmap[i*image_width+j] = 0x00ffffff;
-			} else {
-				colorpixmap[i*image_width+j] = 0;
-			}
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-
-	// line & circle
-	printf("draw_line\n");
-	memset(c->buffer, 0, c->header.pitch*c->header.height*sizeof(unsigned char));
-	bytemap_draw_line(50, 25, image_width-100, image_height-11, 128, c);
-	bytemap_fast_draw_line(150, 100, image_width, image_height-11, 200, c);
-	//draw_circle(150, 100, 50, 255, c);
-	//draw_filled_circle(200, 200, 50, 128, c);
-	colorpixmap = (int *)(((BITMAP *)image1)->bmBits);
-	for (i = 0; i < image_height; i++) {
-		for (j = 0; j < image_width; j++) {
-			// colorpixmap[] contains red << 16 | green << 8 || blue 
-			colorpixmap[i*image_width+j] = ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<16)| // red
-										   ((((int)*(c->buffer+i*c->header.pitch+j))&0xff)<<8)| // green
-										   (((int)*(c->buffer+i*c->header.pitch+j))&0xff); // blue
-		}
-	}
-	putimage(0, 0, image1, COPY_PUT);
-	getch();
-	
-	// hough accumulate
-	hough_line_t *hough_line;
-	dwordmap_t *cell;
-	long vmax;
-	int imax, jmax;
-	double r, t, aa, bb, cc;
+  hough_circle = hough_circle_new(0, 0, 100, 0, 0, 100, 0, 0, 100);
+  hough_circle_accumulate(hough_circle, bin);
+  hough_circle_get_sorted_index(&jmax, &imax, &kmax, 1, hough_circle);
+  hough_circle_get_arguments(&xorg, &yorg, &r, bitmap_get_width(bin)/2.0, bitmap_get_height(bin)/2.0, jmax, imax, kmax, hough_circle);
+  hough_circle_destroy(hough_circle);
+  bitmap_draw_circle((int)round(xorg), (int)round(yorg), (int)round(r), 1, bin);
+  write_bitmap_to_screen(bin, NULL, NULL);
+  wait_keyhit();
 	
 	printf("hough line\n");
 	hough_line = hough_line_create(0, 0, 100, 0, 0, 100);

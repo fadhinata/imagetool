@@ -261,7 +261,7 @@ void bitmap_or(bitmap_t *q, bitmap_t *p)
 
 void bitmap_copy_bitmap_xor_bitmap(bitmap_t *c, bitmap_t *a, bitmap_t *b)
 {
-  int x, y, w, h, cpitch, apitch, bpitch;
+  int x, y, /* w, */ h, cpitch, apitch, bpitch;
   uint8_t *cbuf, *abuf, *bbuf;
 	
   assert(c);
@@ -272,7 +272,7 @@ void bitmap_copy_bitmap_xor_bitmap(bitmap_t *c, bitmap_t *a, bitmap_t *b)
   assert(bitmap_get_height(c) == bitmap_get_height(a));
   assert(bitmap_get_height(c) == bitmap_get_height(b));
 
-  w = bitmap_get_width(c);
+  //w = bitmap_get_width(c);
   h = bitmap_get_height(c);
 
   cpitch = bitmap_get_pitch(c) / sizeof(*cbuf);
@@ -351,7 +351,7 @@ void bitmap_set(bitmap_t *m, int x, int y, int dx, int dy)
 {
   int i, j, pitch;
   int nx, ny;
-  int offset1, offset2;
+  //int offset1, offset2;
   uint8_t *buf;
 
   assert(m);
@@ -366,8 +366,8 @@ void bitmap_set(bitmap_t *m, int x, int y, int dx, int dy)
   pitch = bitmap_get_pitch(m) / sizeof(*buf);
   buf = bitmap_get_buffer(m) + y * pitch;
 
-  offset1 = (8 - (x % 8)) % 8;
-  offset2 = (nx % 8);
+  //offset1 = (8 - (x % 8)) % 8;
+  //offset2 = (nx % 8);
   for (i = y; i < ny; i++) {
 #if 1
     for (j = x; j < nx; j++)

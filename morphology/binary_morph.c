@@ -935,7 +935,7 @@ void hit_and_miss(bitmap_t *q, bitmap_t *p, bytemap_t *hit_kernel, bytemap_t *mi
 void region_filling(bitmap_t *q, bitmap_t *p, int xhole, int yhole)
 {
   int x, y, i, j;
-  int hit, not_done, count;
+  int hit, not_done; //, count;
   int left, right, bottom, top;
   int new_left, new_right, new_bottom, new_top;
   bytemap_t *kernel;
@@ -951,7 +951,7 @@ void region_filling(bitmap_t *q, bitmap_t *p, int xhole, int yhole)
 
   // kernel setting
   kernel = bytemap_new(3, 3);
-  count = 5;
+  //  count = 5;
   kbuf = (int8_t *)bytemap_get_buffer(kernel);
   *(kbuf) = -1; *(kbuf+1) = 1; *(kbuf+2) = -1; kbuf += bytemap_get_pitch(kernel);
   *(kbuf) =  1; *(kbuf+1) = 1; *(kbuf+2) =  1; kbuf += bytemap_get_pitch(kernel);

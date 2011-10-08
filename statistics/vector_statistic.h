@@ -24,11 +24,11 @@
 extern "C" {
 #endif 
 
-#define vector_get_mean(v) (vector_get_sum(v) / (double)vector_get_length(v))
-#define ivector_get_mean(v) (ivector_get_sum(v) / (double)vector_get_length(v))
+#define vector_get_mean(v) (vector_get_sum(v) / (real_t)vector_get_length(v))
+#define ivector_get_mean(v) (ivector_get_sum(v) / (real_t)vector_get_length(v))
   complex_t cvector_get_mean(vector_t *vec);
-  double vector_get_2nd_moment(vector_t *vec, double org);
-  double ivector_get_2nd_moment(vector_t *vec, double org);
+  real_t vector_get_2nd_moment(vector_t *vec, real_t org);
+  real_t ivector_get_2nd_moment(vector_t *vec, real_t org);
   complex_t cvector_get_2nd_moment(vector_t *vec, complex_t org);
 #define vector_get_variance(v) vector_get_2nd_moment(v, vector_get_mean(v))
 #define ivector_get_variance(v) ivector_get_2nd_moment(v, vector_get_mean(v))
@@ -36,14 +36,14 @@ extern "C" {
 #define vector_get_standard_deviation(v) sqrt(vector_get_2nd_moment(v, vector_get_mean(v)))
 #define ivector_get_standard_deviation(v) sqrt(ivector_get_2nd_moment(v, ivector_get_mean(v))
   complex_t cvector_get_standard_deviation(vector_t *vec);
-  int vector_read_moments(double *scnd, double *thrd, double *frth, vector_t *vec, double org);
-  int ivector_read_moments(double *scnd, double *thrd, double *frth, vector_t *vec, double org);
+  int vector_read_moments(real_t *scnd, real_t *thrd, real_t *frth, vector_t *vec, real_t org);
+  int ivector_read_moments(real_t *scnd, real_t *thrd, real_t *frth, vector_t *vec, real_t org);
   int cvector_read_moments(complex_t *scnd, complex_t *thrd, complex_t *frth, vector_t *vec, complex_t org);
-  double vector_get_skewness(vector_t *vec);
-  double ivector_get_skewness(vector_t *vec);
+  real_t vector_get_skewness(vector_t *vec);
+  real_t ivector_get_skewness(vector_t *vec);
   complex_t cvector_get_skewness(vector_t *vec);
-  double vector_get_kurtosis(vector_t *vec);
-  double ivector_get_kurtosis(vector_t *vec);
+  real_t vector_get_kurtosis(vector_t *vec);
+  real_t ivector_get_kurtosis(vector_t *vec);
   complex_t cvector_get_kurtosis(vector_t *vec);
 
 #ifdef __cplusplus
