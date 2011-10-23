@@ -22,7 +22,7 @@
 #include <malloc.h>
 #include <assert.h>
 
-#include <gray_morph.h>
+#include <morphology/gray_morph.h>
 
 void gray_dilate(bytemap_t *q, bytemap_t *p, bytemap_t *kernel)
 {

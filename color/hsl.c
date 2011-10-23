@@ -18,9 +18,10 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
-#include <bytemap.h>
-#include <floatmap.h>
+
 #include <common.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/floatmap.h>
 
 void rgb2hsl(floatmap_t *h, floatmap_t *s, floatmap_t *l, bytemap_t *r, bytemap_t *g, bytemap_t *b)
 {

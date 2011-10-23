@@ -18,42 +18,37 @@
 #include <assert.h>
 
 #include <common.h>
-#include <matrix.h>
-#include <gram_schmidt.h>
+#include <linear_algebra/matrix.h>
+#include <linear_algebra/gram_schmidt.h>
+#include <linear_algebra/vector_list.h>
 
-int matrix_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p)
+void matrix_new_and_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p)
 {
-	int n;
-	matrix_t *m, *qt;
-	assert(q);
-	assert(r);
-	assert(p);
-	m = matrix_new_and_copy(p);
-	n = matrix_gram_schmidt_process(m, p);
-	*q = matrix_new(n, p->rows, false);
-	matrix_copy_matrix(*q, 0, 0, m, 0, 0, n, m->rows);
-	qt = matrix_new_and_copy_matrix_transpose(*q); // or inverse matrix
-	*r = matrix_new_and_copy_matrix_multiply_matrix(qt, p);
-	matrix_destroy(qt);
-	matrix_destroy(m);
-	return 0;
+  int n;
+  matrix_t *m, *qt;
+
+  assert(q);
+  assert(r);
+  assert(p);
+
+  *q = matrix_new_and_gram_schmidt_process(p);
+  qt = matrix_new_and_copy_matrix_transpose(*q); // or inverse matrix
+  *r = matrix_new_and_copy_matrix_multiply_matrix(qt, p);
+  matrix_destroy(qt);
 }
 
-int cmatrix_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p)
+void cmatrix_new_and_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p)
 {
-	int n;
-	matrix_t *m, *qt;
-	assert(q);
-	assert(r);
-	assert(p);
-	assert(p->imaginary);
-	m = matrix_new_and_copy(p);
-	n = cmatrix_gram_schmidt_process(m, p);
-	*q = matrix_new(n, p->rows, true);
-	cmatrix_copy_cmatrix(*q, 0, 0, m, 0, 0, n, m->rows);
-	qt = cmatrix_new_and_copy_cmatrix_transpose(*q);
-	*r = cmatrix_new_and_copy_cmatrix_multiply_cmatrix(qt, p);
-	matrix_destroy(qt);
-	matrix_destroy(m);
-	return 0;
+  int n;
+  matrix_t *m, *qt;
+
+  assert(q);
+  assert(r);
+  assert(p);
+  assert(matrix_is_imaginary(p));
+
+  *q = cmatrix_new_and_gram_schmidt_process(p);
+  qt = cmatrix_new_and_copy_cmatrix_transpose(*q); // or inverse matrix
+  *r = cmatrix_new_and_copy_cmatrix_multiply_cmatrix(qt, p);
+  matrix_destroy(qt);
 }

@@ -17,12 +17,12 @@
 #ifndef __DELAUNAY_H__
 #define __DELAUNAY_H__
 
-#include <dlink.h>
-#include <point.h>
-#include <bitmap.h>
-#include <point_list.h>
-#include <triangle.h>
-#include <triangle_list.h>
+#include <buffering/dlink.h>
+#include <geometry/point.h>
+#include <pixmap/bitmap.h>
+#include <geometry/point_list.h>
+#include <geometry/triangle.h>
+#include <geometry/triangle_list.h>
 
 #ifdef __cplusplus
 extern "C" {

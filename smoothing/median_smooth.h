@@ -17,7 +17,7 @@
 #ifndef __MEDIAN_SMOOTH_H__
 #define __MEDIAN_SMOOTH_H__
 
-#include <bytemap.h>
+#include <pixmap/bytemap.h>
 
 #ifdef __cplusplus
 extern "C" {

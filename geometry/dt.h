@@ -18,9 +18,9 @@
 #ifndef __DT_H__
 #define __DT_H__
 
-#include <vector.h>
-#include <matrix.h>
-#include <bitmap.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/matrix.h>
+#include <pixmap/bitmap.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -17,7 +17,8 @@
 #ifndef __BEZIER_H__
 #define __BEZIER_H__
 
-#include <matrix.h>
+#include <linear_algebra/matrix.h>
+#include <geometry/point_list.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +29,8 @@ extern "C" {
    * b(u) = sum(k=0..n, kth-ctrl * (n! / (k! * (n - k)!)) * u^k * (1 - u)^(n - k)
    * blending function : (n! / (k! * (n - k)!)) * u^k * (1 - u)^(n - k)
    */
-  void matrix_bezier_spline_curve(matrix_t *plots, matrix_t *ctrl_points);
+  void matrix_bezier_spline_curve(matrix_t *plots, matrix_t *controls);
+  void point_list_create_bezier_spline(point_list_t *bezier, int nbezier, point_list_t *controls);
 
 #ifdef __cplusplus
 }

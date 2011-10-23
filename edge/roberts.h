@@ -17,9 +17,9 @@
 #ifndef __ROBERTS_H__
 #define __ROBERTS_H__
 
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
 
 #ifdef __cplusplus
 extern "C" {

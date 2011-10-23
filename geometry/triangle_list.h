@@ -18,8 +18,8 @@
 #define __TRIANGLE_LIST_H__
 
 #include <common.h>
-#include <dlink.h>
-#include <triangle.h>
+#include <buffering/dlink.h>
+#include <geometry/triangle.h>
 
 #ifdef __cplusplus
 extern "C" {

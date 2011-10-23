@@ -20,8 +20,8 @@
 #include <assert.h>
 
 #include <common.h>
-#include <wordmap.h>
-#include <bitmap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/bitmap.h>
 
 wordmap_t *wordmap_new(int w, int h)
 {

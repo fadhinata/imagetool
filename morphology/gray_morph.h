@@ -18,7 +18,7 @@
 #ifndef __GRAY_MORPH_H__
 #define __GRAY_MORPH_H__
 
-#include <bytemap.h>
+#include <pixmap/bytemap.h>
 
 #ifdef __cplusplus
 extern "C" {

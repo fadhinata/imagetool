@@ -19,12 +19,13 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <floatmap.h>
+
 #include <common.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/floatmap.h>
 
 void bitmap_draw_line(int x1, int y1, int x2, int y2, uint8_t val, bitmap_t *m)
 {
@@ -59,8 +60,8 @@ void bitmap_draw_line(int x1, int y1, int x2, int y2, uint8_t val, bitmap_t *m)
       if (!(px >= 0 && px < w)) continue;
       py = slope*i + y1;
       if (!(py >= 0 && py < h)) continue;
-      if (val != 0) bitmap_set_value(px, py, m);
-      else bitmap_reset_value(px, py, m);
+      if (val != 0) bitmap_set_value(m, px, py);
+      else bitmap_reset_value(m, px, py);
       //*(p->buffer+py*p->header.pitch+px) = col;
     }
   } else {
@@ -71,8 +72,8 @@ void bitmap_draw_line(int x1, int y1, int x2, int y2, uint8_t val, bitmap_t *m)
       if (!(px >= 0 && px < w)) continue;
       py = i + y1;
       if (!(py >= 0 && py < h)) continue;
-      if (val != 0) bitmap_set_value(px, py, m);
-      else bitmap_reset_value(px, py, m);
+      if (val != 0) bitmap_set_value(m, px, py);
+      else bitmap_reset_value(m, px, py);
       //*(p->buffer+py*p->header.pitch+px) = col;
     }
   }
@@ -169,8 +170,8 @@ void bitmap_fast_draw_line(int x1, int y1, int x2, int y2, uint8_t val, bitmap_t
 
   if ((px >= 0 && px < w) &&
       (py >= 0 && py < h)) {
-    if (val != 0) bitmap_set_value(px, py, m);
-    else bitmap_reset_value(px, py, m);
+    if (val != 0) bitmap_set_value(m, px, py);
+    else bitmap_reset_value(m, px, py);
     //*((m)->buffer+py*m->header.pitch+px) = val;
   }
 
@@ -185,8 +186,8 @@ void bitmap_fast_draw_line(int x1, int y1, int x2, int y2, uint8_t val, bitmap_t
       px += sdx;
       if ((px >= 0 && px < w) &&
 	  (py >= 0 && py < h)) {
-	if (val != 0) bitmap_set_value(px, py, m);
-	else bitmap_reset_value(px, py, m);
+	if (val != 0) bitmap_set_value(m, px, py);
+	else bitmap_reset_value(m, px, py);
 	//*((m)->buffer+py*m->header.pitch+px) = val;
       }
     }
@@ -201,8 +202,8 @@ void bitmap_fast_draw_line(int x1, int y1, int x2, int y2, uint8_t val, bitmap_t
       py += sdy;
       if ((px >= 0 && px < w) &&
 	  (py >= 0 && py < h)) {
-	if (val != 0) bitmap_set_value(px, py, m);
-	else bitmap_reset_value(px, py, m);
+	if (val != 0) bitmap_set_value(m, px, py);
+	else bitmap_reset_value(m, px, py);
 	//*((m)->buffer+py*m->header.pitch+px) = val;
       }
     }

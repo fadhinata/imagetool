@@ -21,7 +21,7 @@
 #include <assert.h>
 
 #include <common.h>
-#include <hough_line.h>
+#include <hough/hough_line.h>
 
 hough_line_t *hough_line_new(real_t tmin, real_t tmax, int nt, real_t rmin, real_t rmax, int nr)
 {
@@ -78,11 +78,11 @@ int hough_line_get_sorted_index(int *tindex, int *rindex, int n, hough_line_t *h
 
   for (i = 0; i < h; i++) {
     for (j = 0; j < w; j++) {
-      val = dwordmap_get_value(j, i, cell);
+      val = dwordmap_get_value(cell, j, i);
       //val = *(cell->buffer+i*(cell->header.pitch)/sizeof(*(cell->buffer))+j);
       if (val == 0) continue;
       for (k = 0; k < cnt; k++) {
-	tmp = dwordmap_get_value(tindex[k], rindex[k], cell);
+	tmp = dwordmap_get_value(cell, tindex[k], rindex[k]);
 	/*
 	tmp = *(cell->buffer+
 		(rindex[k])*(cell->header.pitch)/sizeof(*(cell->buffer))+
@@ -187,7 +187,7 @@ void hough_line_accumulate(hough_line_t *hough, bitmap_t *bin)
 	r = costbl[j] * xbias + sintbl[j] * ybias;
 	i = (int)round((r - hough->rmin) / hough->dr);
 	if (i >= 0 && i < dwordmap_get_height(cell)) {
-	  dwordmap_inc_value(j, i, cell);
+	  dwordmap_inc_value(cell, j, i);
 	}
       }
     }
@@ -245,7 +245,7 @@ void hough_line_fast_accumulate(hough_line_t *hough, matrix_t *grad, real_t thre
 	r = xbias * xgrad + ybias * ygrad; /* -sqrt(sqr(x)+sqr(y)) ... sqrt(sqr(x)+sqr(y))  */
 	i = (int)round((r - hough->rmin) / hough->dr);
 	if (i >= 0 && i < dwordmap_get_height(cell)) {
-	  dwordmap_inc_value(j, i, cell);
+	  dwordmap_inc_value(cell, j, i);
 	}
       }
     }

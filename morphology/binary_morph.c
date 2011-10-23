@@ -19,12 +19,12 @@
 #include <string.h>
 #include <math.h>
 #include <malloc.h>
-
-#include <bitmap.h>
-#include <bytemap.h>
-#include <binary_morph.h>
 #include <assert.h>
+
 #include <common.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <morphology/binary_morph.h>
 
 void binary_dilate(bitmap_t *q, bitmap_t *p, bytemap_t *kernel)
 {
@@ -962,7 +962,7 @@ void region_filling(bitmap_t *q, bitmap_t *p, int xhole, int yhole)
   tmp2 = bitmap_clone(p);
 
   // start pixel for dilation
-  bitmap_set_value(xhole, yhole, tmp1);
+  bitmap_set_value(tmp1, xhole, yhole);
 
   left = max(0, xhole - 1);
   right = min(bitmap_get_width(p) - 1, xhole + 1);
@@ -987,10 +987,10 @@ void region_filling(bitmap_t *q, bitmap_t *p, int xhole, int yhole)
               if ((x + j) >= 0 && (x + j) < bitmap_get_width(p)) {
                 switch (*(kbuf + (j + 1))) {
                 case 0:
-                  if (bitmap_isreset(x + j, y + i, tmp1)) hit++;
+                  if (bitmap_isreset(tmp1, x + j, y + i)) hit++;
                   break;
                 case 1:
-                  if (bitmap_isset(x + j, y + i, tmp1)) hit++;
+                  if (bitmap_isset(tmp1, x + j, y + i)) hit++;
                   break;
                 case -1: // don't care
                   break;
@@ -1004,7 +1004,7 @@ void region_filling(bitmap_t *q, bitmap_t *p, int xhole, int yhole)
 	  kbuf += bytemap_get_pitch(kernel);
 	}
 	if (hit > 0) {
-	  bitmap_set_value(x, y, tmp2);
+	  bitmap_set_value(tmp2, x, y);
 	  if ((x-1) < new_left) new_left = max(x-1, 0);
 	  if ((x+1) > new_right) new_right = min(x+1, bitmap_get_width(p)-1);
 	  if ((y-1) < new_bottom) new_bottom = max(y-1, 0);
@@ -1020,19 +1020,19 @@ void region_filling(bitmap_t *q, bitmap_t *p, int xhole, int yhole)
       for (x = new_left; x <= new_right; x++) {
 	// and operation between tmp2 and not_p
 	// check equality
-	if (bitmap_isset(x, y, tmp2)) {
-	  if (bitmap_isset(x, y, not_p)) {
-	    bitmap_set_value(x, y, tmp1);
+	if (bitmap_isset(tmp2, x, y)) {
+	  if (bitmap_isset(not_p, x, y)) {
+	    bitmap_set_value(tmp1, x, y);
 	    if ((x-1) < left) left = max(x-1, 0);
 	    if ((x+1) > right) right = min(x+1, bitmap_get_width(p)-1);
 	    if ((y-1) < bottom) bottom = max(y-1, 0);
 	    if ((y+1) > top) top = min(y+1, bitmap_get_height(p)-1);
 	  } else { // not_p[y][x] '0'
-	    bitmap_reset_value(x, y, tmp1);
+	    bitmap_reset_value(tmp1, x, y);
 	    not_done = 1;
 	  }
 	} else { // tmp2[y][x] '0'
-	  bitmap_reset_value(x, y, tmp1);
+	  bitmap_reset_value(tmp1, x, y);
 	}
       }
     }

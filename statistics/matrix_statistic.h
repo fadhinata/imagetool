@@ -17,9 +17,9 @@
 #ifndef __MATRIX_STATISTIC_H__
 #define __MATRIX_STATISTIC_H__
 
-#include <matrix.h>
-#include <complex2.h>
-#include <bitmap.h>
+#include <linear_algebra/matrix.h>
+#include <linear_algebra/complex2.h>
+#include <pixmap/bitmap.h>
 
 #ifdef __cplusplus
 extern "C" {

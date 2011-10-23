@@ -18,9 +18,9 @@
 #define __CONVEXHULL_H__
 
 #include <common.h>
-#include <line.h>
-#include <point_list.h>
-#include <polygon.h>
+#include <geometry/line.h>
+#include <geometry/point_list.h>
+#include <geometry/polygon.h>
 
 #ifdef __cplusplus
 extern "C" {

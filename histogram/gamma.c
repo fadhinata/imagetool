@@ -16,9 +16,10 @@
 */
 #include <math.h>
 #include <limits.h>
-#include <common.h>
-#include <gamma.h>
 #include <assert.h>
+
+#include <common.h>
+#include <histogram/gamma.h>
 
 static int *bytemap_gamma_transfer_table(int *conv, real_t r)
 {

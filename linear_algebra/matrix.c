@@ -23,9 +23,9 @@
 #include <assert.h>
 #include <float.h>
 
-#include <matrix.h>
-#include <gauss.h>
 #include <common.h>
+#include <linear_algebra/matrix.h>
+#include <linear_algebra/gauss.h>
 
 matrix_t *matrix_new(int columns, int rows, bool complex_or_not)
 {
@@ -91,14 +91,14 @@ void matrix_dump(matrix_t *m)
   if (matrix_is_imaginary(m)) {
     for (i = 0; i < matrix_get_rows(m); i++) {
       for (j = 0; j < matrix_get_columns(m); j++) {
-	printf("%.4f+i%.4lf ", matrix_get_value(j, i, m), imatrix_get_value(j, i, m));
+	printf("%.4f+i%.4lf ", matrix_get_value(m, j, i), imatrix_get_value(m, j, i));
       }
       printf("\n");
     }
   } else {
     for (i = 0; i < matrix_get_rows(m); i++) {
       for (j = 0; j < matrix_get_columns(m); j++) {
-	printf("%.4lf ", matrix_get_value(j, i, m));
+	printf("%.4lf ", matrix_get_value(m, j, i));
       }
       printf("\n");
     }
@@ -274,6 +274,7 @@ int cmatrix_identify(matrix_t *m)
   return matrix_identify(m);
 }
 
+
 #define MATRIX_COMPARE(q, qcols, qrows, p, pcols, prows) {		\
     int i, j;								\
     real_t *qbuf, *pbuf;						\
@@ -333,13 +334,181 @@ int cmatrix_compare_cmatrix(matrix_t *q, matrix_t *p)
 
   for (r = 0; r < matrix_get_rows(p); r++) {
     for (c = 0; c < matrix_get_columns(p); c++) {
-      cmatrix_read_value(&v1, c, r, q);
-      cmatrix_read_value(&v2, c, r, p);
+      cmatrix_read_value(&v1, q, c, r);
+      cmatrix_read_value(&v2, p, c, r);
       if (complex_compare(&v1, &v2) != 0) return -1;
     }
   }
 
   return 0;
+}
+
+void matrix_exchange_row(int i, int j, matrix_t *m)
+{
+  int k, columns, rows;
+  real_t *qbuf, *pbuf, tmp;
+
+  assert(m);
+  assert(i >= 0 && i < matrix_get_rows(m));
+  assert(j >= 0 && j < matrix_get_rows(m));
+  assert(i != j);
+
+  if (i == j) return;
+
+  columns = matrix_get_columns(m);
+  rows = matrix_get_rows(m);
+  qbuf = matrix_get_buffer(m) + i * columns;
+  pbuf = matrix_get_buffer(m) + j * columns;
+  for (k = 0; k < columns; k++) {
+    tmp = *(qbuf + k);
+    *(qbuf + k) = *(pbuf + k);
+    *(pbuf + k) = tmp;
+  }
+}
+
+void imatrix_exchange_row(int i, int j, matrix_t *m)
+{
+  int k, columns, rows;
+  real_t *qbuf, *pbuf, tmp;
+
+  assert(m);
+  assert(matrix_is_imaginary(m));
+  assert(i >= 0 && i < matrix_get_rows(m));
+  assert(j >= 0 && j < matrix_get_rows(m));
+  assert(i != j);
+
+  if (i == j) return;
+
+  columns = matrix_get_columns(m);
+  rows = matrix_get_rows(m);
+  qbuf = imatrix_get_buffer(m) + i * columns;
+  pbuf = imatrix_get_buffer(m) + j * columns;
+  for (k = 0; k < columns; k++) {
+    tmp = *(qbuf + k);
+    *(qbuf + k) = *(pbuf + k);
+    *(pbuf + k) = tmp;
+  }
+}
+
+void cmatrix_exchange_row(int i, int j, matrix_t *m)
+{
+  int k, columns, rows;
+  real_t *qreal, *qimag, *preal, *pimag, tmp;
+
+  assert(m);
+  assert(matrix_is_imaginary(m));
+  assert(i >= 0 && i < matrix_get_rows(m));
+  assert(j >= 0 && j < matrix_get_rows(m));
+  assert(i != j);
+
+  if (i == j) return;
+
+  columns = matrix_get_columns(m);
+  rows = matrix_get_rows(m);
+
+  qreal = matrix_get_buffer(m) + i * columns;
+  qimag = imatrix_get_buffer(m) + i * columns;
+
+  preal = matrix_get_buffer(m) + j * columns;
+  pimag = imatrix_get_buffer(m) + j * columns;
+
+  for (k = 0; k < columns; k++) {
+    tmp = *(qreal + k);
+    *(qreal + k) = *(preal + k);
+    *(preal + k) = tmp;
+    tmp = *(qimag + k);
+    *(qimag + k) = *(pimag + k);
+    *(pimag + k) = tmp;
+  }
+}
+
+void matrix_exchange_column(int i, int j, matrix_t *m)
+{
+  int k, columns, rows;
+  real_t *pbuf, *qbuf, tmp;
+
+  assert(m);
+  assert(i >= 0 && i < matrix_get_columns(m));
+  assert(j >= 0 && j < matrix_get_columns(m));
+  assert(i != j);
+
+  if (i == j) return;
+
+  columns = matrix_get_columns(m);
+  rows = matrix_get_rows(m);
+
+  pbuf = matrix_get_buffer(m) + i;
+  qbuf = matrix_get_buffer(m) + j;
+  for (k = 0; k < rows; k++) {
+    tmp = *pbuf;
+    *pbuf = *qbuf;
+    *qbuf = tmp;
+    pbuf += columns;
+    qbuf += columns;
+  }
+}
+
+void imatrix_exchange_column(int i, int j, matrix_t *m)
+{
+  int k, columns, rows;
+  real_t *pbuf, *qbuf, tmp;
+
+  assert(m);
+  assert(matrix_is_imaginary(m));
+  assert(i >= 0 && i < matrix_get_columns(m));
+  assert(j >= 0 && j < matrix_get_columns(m));
+  assert(i != j);
+
+  if (i == j) return;
+
+  columns = matrix_get_columns(m);
+  rows = matrix_get_rows(m);
+
+  pbuf = imatrix_get_buffer(m) + i;
+  qbuf = imatrix_get_buffer(m) + j;
+  for (k = 0; k < rows; k++) {
+    tmp = *pbuf;
+    *pbuf = *qbuf;
+    *qbuf = tmp;
+    pbuf += columns;
+    qbuf += columns;
+  }
+}
+
+void cmatrix_exchange_column(int i, int j, matrix_t *m)
+{
+  int k, columns, rows;
+  real_t *preal, *pimag, *qreal, *qimag, tmp;
+
+  assert(m);
+  assert(matrix_is_imaginary(m));
+  assert(i >= 0 && i < matrix_get_columns(m));
+  assert(j >= 0 && j < matrix_get_columns(m));
+  assert(i != j);
+
+  if (i == j) return;
+
+  columns = matrix_get_columns(m);
+  rows = matrix_get_rows(m);
+
+  preal = matrix_get_buffer(m) + i;
+  pimag = imatrix_get_buffer(m) + i;
+
+  qreal = matrix_get_buffer(m) + j;
+  qimag = imatrix_get_buffer(m) + j;
+
+  for (k = 0; k < rows; k++) {
+    tmp = *preal;
+    *preal = *qreal;
+    *qreal = tmp;
+    tmp = *pimag;
+    *pimag = *qimag;
+    *qimag = tmp;
+    preal += columns;
+    pimag += columns;
+    qreal += columns;
+    qimag += columns;
+  }
 }
 
 #define MATRIX_TRANSPOSE(qbuf, qcols, qrows, opcode, pbuf, pcols, prows) { \
@@ -693,28 +862,28 @@ matrix_t *cmatrix_copy_cmatrix(matrix_t *q, int qc, int qr, matrix_t *p, int pc,
 matrix_t *matrix_copy_column_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =, 
-			    vector_get_buffer(p), vector_get_length(p));
+			    vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *matrix_copy_column_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =,
-			    ivector_get_buffer(p), vector_get_length(p));
+			    ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_copy_column_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =,
-			    vector_get_buffer(p), vector_get_length(p));
+			    vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_copy_column_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =,
-			    ivector_get_buffer(p), vector_get_length(p));
+			    ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
@@ -735,7 +904,7 @@ matrix_t *cmatrix_copy_column_cvector(matrix_t *q, int qc, int qr, vector_t *p)
     imatrix_copy_column_ivector(q, qc, qr, p);
   } else {
     if (matrix_is_imaginary(q))
-      imatrix_bezero(q, qc, qr, 1, vector_get_length(p));
+      imatrix_bezero(q, qc, qr, 1, vector_get_dimension(p));
   }
 
   return q;
@@ -744,28 +913,28 @@ matrix_t *cmatrix_copy_column_cvector(matrix_t *q, int qc, int qr, vector_t *p)
 matrix_t *matrix_add_column_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			    vector_get_buffer(p), vector_get_length(p));
+			    vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *matrix_add_column_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			    ivector_get_buffer(p), vector_get_length(p));
+			    ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_add_column_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			    vector_get_buffer(p), vector_get_length(p));
+			    vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_add_column_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			    ivector_get_buffer(p), vector_get_length(p));
+			    ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
@@ -792,28 +961,28 @@ matrix_t *cmatrix_add_column_cvector(matrix_t *q, int qc, int qr, vector_t *p)
 matrix_t *matrix_subtract_column_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			    vector_get_buffer(p), vector_get_length(p));
+			    vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *matrix_subtract_column_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			    ivector_get_buffer(p), vector_get_length(p));
+			    ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_subtract_column_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			    vector_get_buffer(p), vector_get_length(p));
+			    vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_subtract_column_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_COLUMN_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			    ivector_get_buffer(p), vector_get_length(p));
+			    ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
@@ -851,28 +1020,28 @@ matrix_t *cmatrix_subtract_column_cvector(matrix_t *q, int qc, int qr, vector_t 
 matrix_t *matrix_copy_row_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =,
-			 vector_get_buffer(p), vector_get_length(p));
+			 vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *matrix_copy_row_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =,
-			 ivector_get_buffer(p), vector_get_length(p));
+			 ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_copy_row_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =,
-			 vector_get_buffer(p), vector_get_length(p));
+			 vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_copy_row_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, =,
-			 ivector_get_buffer(p), vector_get_length(p));
+			 ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
@@ -893,7 +1062,7 @@ matrix_t *cmatrix_copy_row_cvector(matrix_t *q, int qc, int qr, vector_t *p)
     imatrix_copy_row_ivector(q, qc, qr, p);
   } else {
     if (matrix_is_imaginary(q))
-      imatrix_bezero(q, qc, qr, vector_get_length(p), 1);
+      imatrix_bezero(q, qc, qr, vector_get_dimension(p), 1);
   }
 
   return q;
@@ -902,28 +1071,28 @@ matrix_t *cmatrix_copy_row_cvector(matrix_t *q, int qc, int qr, vector_t *p)
 matrix_t *matrix_add_row_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			 vector_get_buffer(p), vector_get_length(p));
+			 vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *matrix_add_row_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			 ivector_get_buffer(p), vector_get_length(p));
+			 ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_add_row_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			 vector_get_buffer(p), vector_get_length(p));
+			 vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_add_row_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, +=,
-			 ivector_get_buffer(p), vector_get_length(p));
+			 ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
@@ -950,28 +1119,28 @@ matrix_t *cmatrix_add_row_cvector(matrix_t *q, int qc, int qr, vector_t *p)
 matrix_t *matrix_subtract_row_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			 vector_get_buffer(p), vector_get_length(p));
+			 vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *matrix_subtract_row_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(matrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			 ivector_get_buffer(p), vector_get_length(p));
+			 ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_subtract_row_vector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			 vector_get_buffer(p), vector_get_length(p));
+			 vector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
 matrix_t *imatrix_subtract_row_ivector(matrix_t *q, int qc, int qr, vector_t *p)
 {
   MATRIX_COPY_ROW_VECTOR(imatrix_get_buffer(q), matrix_get_columns(q), matrix_get_rows(q), qc, qr, -=,
-			 ivector_get_buffer(p), vector_get_length(p));
+			 ivector_get_buffer(p), vector_get_dimension(p));
   return q;
 }
 
@@ -1010,28 +1179,28 @@ matrix_t *cmatrix_subtract_row_cvector(matrix_t *q, int qc, int qr, vector_t *p)
 
 vector_t *vector_copy_column_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), =,
+  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), =,
 			  matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *vector_copy_column_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), =,
+  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), =,
 			  imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_copy_column_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), =,
+  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), =,
 			  matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_copy_column_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), =,
+  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), =,
 			  imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
@@ -1061,28 +1230,28 @@ vector_t *cvector_copy_column_vector_of_cmatrix(vector_t *q, matrix_t *p, int c,
 
 vector_t *vector_add_column_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), +=,
+  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), +=,
 			  matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *vector_add_column_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), +=,
+  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), +=,
 			  imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_add_column_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), +=,
+  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), +=,
 			  matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_add_column_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), +=,
+  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), +=,
 			  imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
@@ -1109,28 +1278,28 @@ vector_t *cvector_add_column_vector_of_cmatrix(vector_t *q, matrix_t *p, int c, 
 
 vector_t *vector_subtract_column_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), -=,
+  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), -=,
 			  matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *vector_subtract_column_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), -=,
+  COLUMN_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), -=,
 			  imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_subtract_column_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), -=,
+  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), -=,
 			  matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_subtract_column_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), -=,
+  COLUMN_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), -=,
 			  imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
@@ -1170,28 +1339,28 @@ vector_t *cvector_subtract_column_vector_of_cmatrix(vector_t *q, matrix_t *p, in
 
 vector_t *vector_copy_row_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), =,
+  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), =,
 		       matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *vector_copy_row_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), =,
+  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), =,
 		       imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_copy_row_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), =,
+  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), =,
 		       matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_copy_row_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), =,
+  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), =,
 		       imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
@@ -1221,28 +1390,28 @@ vector_t *cvector_copy_row_vector_of_cmatrix(vector_t *q, matrix_t *p, int c, in
 
 vector_t *vector_add_row_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), +=,
+  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), +=,
 		       matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *vector_add_row_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), +=,
+  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), +=,
 		       imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_add_row_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), +=,
+  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), +=,
 		       matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_add_row_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), +=,
+  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), +=,
 		       imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
@@ -1269,28 +1438,28 @@ vector_t *cvector_add_row_vector_of_cmatrix(vector_t *q, matrix_t *p, int c, int
 
 vector_t *vector_subtract_row_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), -=,
+  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), -=,
 		       matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *vector_subtract_row_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_length(q), -=,
+  ROW_VECTOR_OF_MATRIX(vector_get_buffer(q), vector_get_dimension(q), -=,
 		       imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_subtract_row_vector_of_matrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), -=,
+  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), -=,
 		       matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
 
 vector_t *ivector_subtract_row_vector_of_imatrix(vector_t *q, matrix_t *p, int c, int r)
 {
-  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_length(q), -=,
+  ROW_VECTOR_OF_MATRIX(ivector_get_buffer(q), vector_get_dimension(q), -=,
 		       imatrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p), c, r);
   return q;
 }
@@ -4695,65 +4864,65 @@ matrix_t *cmatrix_piecewise_divide_cmatrix(matrix_t *c, matrix_t *a)
 // multiplication between matrix and vector
 vector_t *vector_copy_matrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_matrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_imatrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_imatrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_matrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_matrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_imatrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_imatrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -4762,8 +4931,8 @@ vector_t *cvector_copy_cmatrix_multiply_cvector(vector_t *c, matrix_t *a, vector
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == matrix_get_rows(a));
-  assert(matrix_get_columns(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == matrix_get_rows(a));
+  assert(matrix_get_columns(a) == vector_get_dimension(b));
 
   // for real part (a->real) * (b->real) - (a->imaginary) * (b->imaginary)
   vector_copy_matrix_multiply_vector(c, a, b);
@@ -4777,7 +4946,7 @@ vector_t *cvector_copy_cmatrix_multiply_cvector(vector_t *c, matrix_t *a, vector
     ivector_add_matrix_multiply_ivector(c, a, b);
   } else {
     if (vector_is_imaginary(c))
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
 
   return c;
@@ -4785,65 +4954,65 @@ vector_t *cvector_copy_cmatrix_multiply_cvector(vector_t *c, matrix_t *a, vector
 
 vector_t *vector_add_matrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_matrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_imatrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_imatrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_matrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_matrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_imatrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_imatrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -4852,8 +5021,8 @@ vector_t *cvector_add_cmatrix_multiply_cvector(vector_t *c, matrix_t *a, vector_
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == matrix_get_rows(a));
-  assert(matrix_get_columns(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == matrix_get_rows(a));
+  assert(matrix_get_columns(a) == vector_get_dimension(b));
 
   // for real part (a->real) * (b->real) - (a->imaginary) * (b->imaginary)
   vector_add_matrix_multiply_vector(c, a, b);
@@ -4872,65 +5041,65 @@ vector_t *cvector_add_cmatrix_multiply_cvector(vector_t *c, matrix_t *a, vector_
 
 vector_t *vector_subtract_matrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), -=, 
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=, 
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_matrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_imatrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_imatrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_matrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_matrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
 				  matrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_imatrix_multiply_vector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_imatrix_multiply_ivector(vector_t *c, matrix_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
+  VECTOR_OPCODE_MATRIX_MUL_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
 				  imatrix_get_buffer(a), matrix_get_columns(a), matrix_get_rows(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -4939,8 +5108,8 @@ vector_t *cvector_subtract_cmatrix_multiply_cvector(vector_t *c, matrix_t *a, ve
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == matrix_get_rows(a));
-  assert(matrix_get_columns(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == matrix_get_rows(a));
+  assert(matrix_get_columns(a) == vector_get_dimension(b));
 
   // for real part (a->real) * (b->real) - (a->imaginary) * (b->imaginary)
   vector_subtract_matrix_multiply_vector(c, a, b);
@@ -4963,7 +5132,7 @@ vector_t *vector_new_and_copy_matrix_multiply_vector(matrix_t *a, vector_t *b)
 
   assert(a);
   assert(b);
-  assert(matrix_get_columns(a) == vector_get_length(b));
+  assert(matrix_get_columns(a) == vector_get_dimension(b));
 
   c = vector_new(matrix_get_rows(a), false);
   vector_copy_matrix_multiply_vector(c, a, b);
@@ -4977,7 +5146,7 @@ vector_t *cvector_new_and_copy_cmatrix_multiply_cvector(matrix_t *a, vector_t *b
 
   assert(a);
   assert(b);
-  assert(matrix_get_columns(a) == vector_get_length(b));
+  assert(matrix_get_columns(a) == vector_get_dimension(b));
 
   c = vector_new(matrix_get_rows(a), false);
   cvector_copy_cmatrix_multiply_cvector(c, a, b);
@@ -5004,64 +5173,64 @@ vector_t *cvector_new_and_copy_cmatrix_multiply_cvector(matrix_t *a, vector_t *b
 
 vector_t *vector_copy_vector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), =,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_copy_vector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), =,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), =,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), =,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), =,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), =,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), =,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), =,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
@@ -5071,8 +5240,8 @@ vector_t *cvector_copy_cvector_multiply_cmatrix(vector_t *c, vector_t *a, matrix
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == matrix_get_columns(b));
-  assert(vector_get_length(a) == matrix_get_rows(b));
+  assert(vector_get_dimension(c) == matrix_get_columns(b));
+  assert(vector_get_dimension(a) == matrix_get_rows(b));
 
   // for real part (a->real) * (b->real) - (a->imaginary) * (b->imaginary)
   vector_copy_vector_multiply_matrix(c, a, b);
@@ -5086,7 +5255,7 @@ vector_t *cvector_copy_cvector_multiply_cmatrix(vector_t *c, vector_t *a, matrix
     ivector_add_vector_multiply_imatrix(c, a, b);
   } else {
     if (vector_is_imaginary(c))
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
 
   return c;
@@ -5094,64 +5263,64 @@ vector_t *cvector_copy_cvector_multiply_cmatrix(vector_t *c, vector_t *a, matrix
 
 vector_t *vector_add_vector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), +=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_add_vector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), +=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_add_ivector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), +=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_add_ivector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), +=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_add_vector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), +=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_add_vector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), +=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_add_ivector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), +=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_add_ivector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), +=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
@@ -5161,8 +5330,8 @@ vector_t *cvector_add_cvector_multiply_cmatrix(vector_t *c, vector_t *a, matrix_
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == matrix_get_columns(b));
-  assert(vector_get_length(a) == matrix_get_rows(b));
+  assert(vector_get_dimension(c) == matrix_get_columns(b));
+  assert(vector_get_dimension(a) == matrix_get_rows(b));
 
   // for real part (a->real) * (b->real) - (a->imaginary) * (b->imaginary)
   vector_add_vector_multiply_matrix(c, a, b);
@@ -5181,64 +5350,64 @@ vector_t *cvector_add_cvector_multiply_cmatrix(vector_t *c, vector_t *a, matrix_
 
 vector_t *vector_subtract_vector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), -=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_subtract_vector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), -=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), -=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), -=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_length(c), -=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(vector_get_buffer(c), vector_get_dimension(c), -=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), -=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), -=,
+				  vector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_multiply_matrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), -=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), -=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  matrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_multiply_imatrix(vector_t *c, vector_t *a, matrix_t *b)
 {
-  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_length(c), -=,
-				  ivector_get_buffer(a), vector_get_length(a),
+  VECTOR_OPCODE_VECTOR_MUL_MATRIX(ivector_get_buffer(c), vector_get_dimension(c), -=,
+				  ivector_get_buffer(a), vector_get_dimension(a),
 				  imatrix_get_buffer(b), matrix_get_columns(b), matrix_get_rows(b));
   return c;
 }
@@ -5248,8 +5417,8 @@ vector_t *cvector_subtract_cvector_multiply_cmatrix(vector_t *c, vector_t *a, ma
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == matrix_get_columns(b));
-  assert(vector_get_length(a) == matrix_get_rows(b));
+  assert(vector_get_dimension(c) == matrix_get_columns(b));
+  assert(vector_get_dimension(a) == matrix_get_rows(b));
 
   // for real part (a->real) * (b->real) - (a->imaginary) * (b->imaginary)
   vector_subtract_vector_multiply_matrix(c, a, b);
@@ -5283,64 +5452,64 @@ vector_t *cvector_subtract_cvector_multiply_cmatrix(vector_t *c, vector_t *a, ma
 matrix_t *matrix_copy_vector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_copy_vector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_copy_ivector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_copy_ivector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_copy_vector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_copy_vector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  vector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_copy_ivector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_copy_ivector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), =,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -5371,64 +5540,64 @@ matrix_t *cmatrix_copy_cvector_multiply_cvector(matrix_t *c, vector_t *a, vector
 matrix_t *matrix_add_vector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_add_vector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_add_ivector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_add_ivector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_add_vector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_add_vector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_add_ivector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_add_ivector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), +=,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -5456,64 +5625,64 @@ matrix_t *cmatrix_add_cvector_multiply_cvector(matrix_t *c, vector_t *a, vector_
 matrix_t *matrix_subtract_vector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_subtract_vector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_subtract_ivector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *matrix_subtract_ivector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(matrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_subtract_vector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_subtract_vector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_subtract_ivector_multiply_vector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  vector_get_buffer(a), vector_get_length(a),
-				  vector_get_buffer(b), vector_get_length(b));
+				  vector_get_buffer(a), vector_get_dimension(a),
+				  vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 matrix_t *imatrix_subtract_ivector_multiply_ivector(matrix_t *c, vector_t *a, vector_t *b)
 {
   MATRIX_OPCODE_VECTOR_MUL_VECTOR(imatrix_get_buffer(c), matrix_get_columns(c), matrix_get_rows(c), -=,
-				  ivector_get_buffer(a), vector_get_length(a),
-				  ivector_get_buffer(b), vector_get_length(b));
+				  ivector_get_buffer(a), vector_get_dimension(a),
+				  ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -5545,7 +5714,7 @@ matrix_t *matrix_new_and_copy_vector_multiply_vector(vector_t *a, vector_t *b)
   assert(a);
   assert(b);
 
-  c = matrix_new(vector_get_length(b), vector_get_length(a), false);
+  c = matrix_new(vector_get_dimension(b), vector_get_dimension(a), false);
   matrix_copy_vector_multiply_vector(c, a, b);
 
   return c;
@@ -5558,7 +5727,7 @@ matrix_t *cmatrix_new_and_copy_cvector_multiply_cvector(vector_t *a, vector_t *b
   assert(a);
   assert(b);
 
-  c = matrix_new(vector_get_length(b), vector_get_length(a), false);
+  c = matrix_new(vector_get_dimension(b), vector_get_dimension(a), false);
   cmatrix_copy_cvector_multiply_cvector(c, a, b);
 
   return c;
@@ -5579,12 +5748,12 @@ static void matrix_determinant(real_t *det, matrix_t *mat)
     for (i = 0; i < columns; i++) {
       matrix_copy_matrix_minor(minor, mat, i, 0);
       matrix_determinant(&value, minor);
-      *det += matrix_get_value(i, 0, mat) * value * pow(-1.0, 2.0 + i);
+      *det += matrix_get_value(mat, i, 0) * value * pow(-1.0, 2.0 + i);
     }
     matrix_destroy(minor);
   } else if (columns  == 2) {
-    *det = matrix_get_value(0, 0, mat) * matrix_get_value(1, 1, mat) -
-      matrix_get_value(1, 0, mat) * matrix_get_value(0, 1, mat);
+    *det = matrix_get_value(mat, 0, 0) * matrix_get_value(mat, 1, 1) -
+      matrix_get_value(mat, 1, 0) * matrix_get_value(mat, 0, 1);
   }
   /* else { // mat->columns == 1
     *det = matrix_get_value(0, 0, mat);
@@ -5619,8 +5788,8 @@ static void cmatrix_determinant(complex_t *det, matrix_t *p)
     for (i = 0; i < columns; i++) {
       cmatrix_copy_cmatrix_minor(minor, p, i, 0);
       cmatrix_determinant(&value, minor);
-      det->real += (matrix_get_value(i, 0, p) * value.real - imatrix_get_value(i, 0, p) * value.imag) * pow(-1.0, 2.0 + i);
-      det->imag += (matrix_get_value(i, 0, p) * value.imag + imatrix_get_value(i, 0, p) * value.real) * pow(-1.0, 2.0 + i);
+      det->real += (matrix_get_value(p, i, 0) * value.real - imatrix_get_value(p, i, 0) * value.imag) * pow(-1.0, 2.0 + i);
+      det->imag += (matrix_get_value(p, i, 0) * value.imag + imatrix_get_value(p, i, 0) * value.real) * pow(-1.0, 2.0 + i);
       /*
       det->real += ((*(p->real+i)) * value.real - (*(p->imaginary+i)) * value.imag) * pow(-1.0, 2.0 + i);
       det->imag += ((*(p->real+i)) * value.imag + (*(p->imaginary+i)) * value.real) * pow(-1.0, 2.0 + i);
@@ -5628,11 +5797,11 @@ static void cmatrix_determinant(complex_t *det, matrix_t *p)
     }
     matrix_destroy(minor);
   } else if (columns  == 2) {
-    det->real = (matrix_get_value(0, 0, p) * matrix_get_value(1, 1, p) - imatrix_get_value(0, 0, p) * imatrix_get_value(1, 1, p)) - 
-      (matrix_get_value(1, 0, p) * matrix_get_value(0, 1, p) - imatrix_get_value(1, 0, p) * imatrix_get_value(0, 1, p));
+    det->real = (matrix_get_value(p, 0, 0) * matrix_get_value(p, 1, 1) - imatrix_get_value(p, 0, 0) * imatrix_get_value(p, 1, 1)) - 
+      (matrix_get_value(p, 1, 0) * matrix_get_value(p, 0, 1) - imatrix_get_value(p, 1, 0) * imatrix_get_value(p, 0, 1));
 
-    det->imag = (matrix_get_value(0, 0, p) * imatrix_get_value(1, 1, p) + imatrix_get_value(0, 0, p) * matrix_get_value(1, 1, p)) -
-      (matrix_get_value(1, 0, p) * imatrix_get_value(0, 1, p) + imatrix_get_value(1, 0, p) * matrix_get_value(0, 1, p));
+    det->imag = (matrix_get_value(p, 0, 0) * imatrix_get_value(p, 1, 1) + imatrix_get_value(p, 0, 0) * matrix_get_value(p, 1, 1)) -
+      (matrix_get_value(p, 1, 0) * imatrix_get_value(p, 0, 1) + imatrix_get_value(p, 1, 0) * matrix_get_value(p, 0, 1));
     /*
     det->real = ((*(p->real)) * (*(p->real+matrix_get_columns(p)+1)) - (*(p->imaginary)) * (*(p->imaginary+matrix_get_columns(p) + 1)))
       -((*(p->real+1)) * (*(p->real+matrix_get_columns(p))) - (*(p->imaginary+1)) * (*(p->imaginary+matrix_get_columns(p))));
@@ -5680,7 +5849,7 @@ matrix_t *matrix_copy_matrix_cofactor(matrix_t *q, matrix_t *p)
       for (c = 0; c < columns; c++) {
 	matrix_copy_matrix_minor(minor, p, c, r);
 	matrix_determinant(&det, minor);
-	matrix_put_value(det * pow(-1, 2 + c + r), c, r, q);
+	matrix_put_value(det * pow(-1, 2 + c + r), q, c, r);
 	//*(matrix_get_buffer(q)+r*matrix_get_columns(q)+c) = pow(-1.0, 2.0+c+r)*det;
       }
     }
@@ -5688,21 +5857,22 @@ matrix_t *matrix_copy_matrix_cofactor(matrix_t *q, matrix_t *p)
   } else if (columns == 2) {
     /*  x  y  =>  w -z
 	z  w     -y  x */
-    matrix_put_value(matrix_get_value(1, 1, p), 0, 0, q);
-    matrix_put_value(-1 * matrix_get_value(0, 1, p), 1, 0, q);
-    matrix_put_value(-1 * matrix_get_value(1, 0, p), 0, 1, q);
-    matrix_put_value(matrix_get_value(0, 0, p), 1, 1, q);
+    matrix_put_value(matrix_get_value(p, 1, 1), q, 0, 0);
+    matrix_put_value(-1 * matrix_get_value(p, 0, 1), q, 1, 0);
+    matrix_put_value(-1 * matrix_get_value(p, 1, 0), q, 0, 1);
+    matrix_put_value(matrix_get_value(p, 0, 0), q, 1, 1);
     /*
     *(matrix_get_buffer(q)) = *(p->real+matrix_get_columns(p)+1);
     *(matrix_get_buffer(q)+1) = -(*(p->real+matrix_get_columns(p)));
     *(matrix_get_buffer(q)+matrix_get_columns(q)) = -(*(p->real+1));
     *(matrix_get_buffer(q)+matrix_get_columns(q)+1) = *(p->real);
     */
+  } else if (columns == 1) {
+    matrix_put_value(matrix_get_value(p, 0, 0), q, 0, 0);
+  } else {
+    assert(0);
   }
-  /* else {
-    *(matrix_get_buffer(q)) = *(p->real);
-  }
-  */
+
   return q;
 }
 
@@ -5730,8 +5900,8 @@ matrix_t *cmatrix_copy_cmatrix_cofactor(matrix_t *q, matrix_t *p)
       for (c = 0; c < columns; c++) {
 	cmatrix_copy_cmatrix_minor(minor, p, c, r);
 	cmatrix_determinant(&det, minor);
-	matrix_put_value(pow(-1, 2 + c + r) * det.real, c, r, q);
-	imatrix_put_value(pow(-1, 2 + c + r) * det.imag, c, r, q);
+	matrix_put_value(pow(-1, 2 + c + r) * det.real, q, c, r);
+	imatrix_put_value(pow(-1, 2 + c + r) * det.imag, q, c, r);
 	/*
 	*(matrix_get_buffer(q)+r*matrix_get_columns(q)+c) = pow(-1.0, 2.0+c+r)*det.real;
 	*(imatrix_get_buffer(q)+r*matrix_get_columns(q)+c) = pow(-1.0, 2.0+c+r)*det.imag;
@@ -5742,14 +5912,14 @@ matrix_t *cmatrix_copy_cmatrix_cofactor(matrix_t *q, matrix_t *p)
   } else if (columns == 2) {
     /* x y  =>  w -z
        z w     -y  x */
-    matrix_put_value(matrix_get_value(1, 1, p), 0, 0, q);
-    imatrix_put_value(imatrix_get_value(1, 1, p), 0, 0, q);
-    matrix_put_value(-1 * matrix_get_value(0, 1, p), 1, 0, q);
-    imatrix_put_value(-1 * imatrix_get_value(0, 1, p), 1, 0, q);
-    matrix_put_value(-1 * matrix_get_value(1, 0, p), 0, 1, q);
-    imatrix_put_value(-1 * imatrix_get_value(1, 0, p), 0, 1, q);
-    matrix_put_value(matrix_get_value(0, 0, p), 1, 1, q);
-    imatrix_put_value(imatrix_get_value(0, 0, p), 1, 1, q);
+    matrix_put_value(matrix_get_value(p, 1, 1), q, 0, 0);
+    imatrix_put_value(imatrix_get_value(p, 1, 1), q, 0, 0);
+    matrix_put_value(-1 * matrix_get_value(p, 0, 1), q, 1, 0);
+    imatrix_put_value(-1 * imatrix_get_value(p, 0, 1), q, 1, 0);
+    matrix_put_value(-1 * matrix_get_value(p, 1, 0), q, 0, 1);
+    imatrix_put_value(-1 * imatrix_get_value(p, 1, 0), q, 0, 1);
+    matrix_put_value(matrix_get_value(p, 0, 0), q, 1, 1);
+    imatrix_put_value(imatrix_get_value(p, 0, 0), q, 1, 1);
     /*
     *(matrix_get_buffer(q)) = *(p->real+matrix_get_columns(p)+1);
     *(imatrix_get_buffer(q)) = *(p->imaginary+matrix_get_columns(p)+1);

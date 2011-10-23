@@ -18,9 +18,10 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
-#include <bytemap.h>
-#include <floatmap.h>
+
 #include <common.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/floatmap.h>
 
 // r,g,b values are from 0 to 1
 // h = [0,360], s = [0,1], v = [0,255]

@@ -18,9 +18,9 @@
 #define __POLYGON_H__
 
 #include <common.h>
-#include <dlink.h>
-#include <point.h>
-#include <point_list.h>
+#include <buffering/dlink.h>
+#include <geometry/point.h>
+#include <geometry/point_list.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -22,7 +22,7 @@
 #include <stdint.h>
 
 #include <common.h>
-#include <gray.h>
+#include <color/gray.h>
 
 void rgb2gray(bytemap_t *gray, bytemap_t *r, bytemap_t *g, bytemap_t *b)
 {

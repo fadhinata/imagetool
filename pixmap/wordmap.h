@@ -18,11 +18,17 @@
 #ifndef __WORDMAP_H__
 #define __WORDMAP_H__
 
+#ifdef _MSC_VER
+typedef unsigned __int16 uint16_t;
+#else
 #include <stdint.h>
-#include <maphdr.h>
-#include <bitmap.h>
+#endif
+
 #include <string.h>
 #include <malloc.h>
+
+#include <pixmap/maphdr.h>
+#include <pixmap/bitmap.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,8 +43,8 @@ extern "C" {
 #define wordmap_get_height(m) ((m)->header.height)
 #define wordmap_get_pitch(m) ((m)->header.pitch)
 #define wordmap_get_buffer(m) ((m)->buffer)
-#define wordmap_get_value(x, y, m) (*((m)->buffer + (y) * (m)->header.pitch / sizeof(int16_t) + (x)))
-#define wordmap_put_value(v, x, y, m) (*((m)->buffer + (y) * (m)->header.pitch / sizeof(int16_t) + (x)) = v)
+#define wordmap_get_value(m, x, y) (*((m)->buffer + (y) * (m)->header.pitch / sizeof(int16_t) + (x)))
+#define wordmap_put_value(v, m, x, y) (*((m)->buffer + (y) * (m)->header.pitch / sizeof(int16_t) + (x)) = v)
   wordmap_t *wordmap_new(int w, int h);
 #define wordmap_destroy(m) { assert(m); free(m); }
 #define wordmap_clone(m) wordmap_new(wordmap_get_width(m), wordmap_get_height(m))

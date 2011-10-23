@@ -17,8 +17,8 @@
 #ifndef __BINARY_MORPH_H__
 #define __BINARY_MORPH_H__
 
-#include <bitmap.h>
-#include <bytemap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
 
 #ifdef __cplusplus
 extern "C" {

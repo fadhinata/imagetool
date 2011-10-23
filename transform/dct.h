@@ -18,8 +18,8 @@
 #define __DCT_H__
 
 #include <common.h>
-#include <vector.h>
-#include <matrix.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {

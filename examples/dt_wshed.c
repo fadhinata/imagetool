@@ -1,23 +1,17 @@
-#include <SDL/SDL.h>
-
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <circle.h>
-#include <matrix.h>
-#include <convert.h>
-#include <dt.h>
-#include <matrix_statistic.h>
-#include <gray.h>
-#include <watershed.h>
-#include <neighbor.h>
-
-extern SDL_Surface *screen;
-extern void keyhit(void);
-extern void putbitmap(bitmap_t *r, bitmap_t *g, bitmap_t *b, SDL_Surface *surface);
-extern void putbytemap(bytemap_t *r, bytemap_t *g, bytemap_t *b, SDL_Surface *surface);
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <drawing/draw_circle.h>
+#include <linear_algebra/matrix.h>
+#include <convert/convert.h>
+#include <geometry/dt.h>
+#include <statistics/matrix_statistic.h>
+#include <color/gray.h>
+#include <region_growing/watershed.h>
+#include <geometry/neighbor.h>
+#include <interface/screen.h>
 
 void test_distance_transform_and_watershed(int w, int h)
 {
@@ -28,6 +22,8 @@ void test_distance_transform_and_watershed(int w, int h)
   dwordmap_t *labelmap;
   wordmap_t *distmap;
   real_t dmax;
+
+  initialize_screen(w, h, 32);
 
   bin = bitmap_new(w, h);
   a = bytemap_new(w, h);
@@ -43,21 +39,21 @@ void test_distance_transform_and_watershed(int w, int h)
   bitmap_draw_filled_circle(w/2, h/2, w/6, 1, bin);
   bitmap_draw_filled_circle(w/4, 3*h/4, w/6, 1, bin);
   bitmap_draw_filled_circle(3*w/4, 3*h/4, w/6, 1, bin);
-  putbitmap(bin, bin, bin, screen);
-  keyhit();
+  write_bitmap_to_screen(bin, bin, bin);
+  wait_keyhit();
 
   bitmap_distance_transform(m, bin);
   dynamic_matrix2bytemap(a, m);
-  putbytemap(a, a, a, screen);
-  keyhit();
+  write_bytemap_to_screen(a, a, a);
+  wait_keyhit();
 
   matrix_get_max(&dmax, m);
   matrix_subtract_scalar(m, dmax);
   matrix_multiply_scalar(m, -1.0);
   matrix2wordmap(distmap, m);
   dynamic_wordmap2rgb(a, b, c, distmap);
-  putbytemap(a, b, c, screen);
-  keyhit();
+  write_bytemap_to_screen(a, b, c);
+  wait_keyhit();
 
   n = wordmap_create_watershed(labelmap, NULL, distmap, NEIGHBOR_8);
   printf("watershed : %d\n", n);
@@ -67,8 +63,8 @@ void test_distance_transform_and_watershed(int w, int h)
   bytemap_mask(b, roi);
   bytemap_mask(c, roi);
   */
-  putbytemap(a, b, c, screen);
-  keyhit();
+  write_bytemap_to_screen(a, b, c);
+  wait_keyhit();
 
   wordmap_destroy(distmap);
   dwordmap_destroy(labelmap);
@@ -77,4 +73,6 @@ void test_distance_transform_and_watershed(int w, int h)
   bytemap_destroy(b);
   bytemap_destroy(a);
   bitmap_destroy(bin);
+
+  deinitialize_screen();
 }

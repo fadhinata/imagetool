@@ -17,8 +17,8 @@
 #ifndef __POINT_LIST_H__
 #define __POINT_LIST_H__
 
-#include <dlink.h>
-#include <point.h>
+#include <buffering/dlink.h>
+#include <geometry/point.h>
 
 #ifdef __cplusplus
 extern "C" {

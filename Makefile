@@ -40,29 +40,6 @@ INCS = -I.
 ifeq ($(GLIB), WINBGIM)
 INCS += -IWinBGIm_Library6_0_Nov2005
 endif
-INCS += -Ipixmap
-INCS += -Ibuffering
-INCS += -Iconvert
-INCS += -Icolor
-INCS += -Idrawing
-INCS += -Iedge
-INCS += -Ifiltering
-INCS += -Ismoothing
-INCS += -Ihistogram
-INCS += -Ithresholding
-INCS += -Igeometry
-INCS += -Ilabeling
-INCS += -Ihough
-INCS += -Ilinear_algebra
-INCS += -Imorphology
-INCS += -Istatistics
-INCS += -Iregression
-INCS += -Iexamples
-INCS += -Ispline
-INCS += -Iwavelet
-INCS += -Iregion_growing
-INCS += -Itransform
-INCS += -Iinterface
 
 CSRC = bmp.c
 CSRC += buffering/dlink.c
@@ -116,6 +93,7 @@ CSRC += pixmap/doublemap.c
 CSRC += region_growing/regiongrow.c
 CSRC += region_growing/watershed.c
 CSRC += regression/least_squares.c
+CSRC += regression/pls.c
 CSRC += regression/pca.c
 CSRC += smoothing/mean_smooth.c
 CSRC += smoothing/median_smooth.c
@@ -133,9 +111,11 @@ CSRC += transform/dct.c
 CSRC += transform/fourier.c
 CSRC += wavelet/daub4.c
 CSRC += wavelet/haar.c
-CSRC += wavelet/wavelet.c
 CSRC += interface/screen.c
-#CSRC += examples/dt_wshed.c
+CSRC += examples/dt_wshed.c
+CSRC += examples/carrot_process.c
+CSRC += examples/tricam_process.c
+CSRC += examples/image_downsize.c
 
 # Define all object files.
 COBJ = $(CSRC:.c=.o)

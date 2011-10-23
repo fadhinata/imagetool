@@ -21,8 +21,8 @@
 extern "C" {
 #endif
 
-#include <bitmap.h>
-#include <bytemap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
 
   //#define USE_LIBSDL
   //#define USE_LIBBGI

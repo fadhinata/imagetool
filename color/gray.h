@@ -17,9 +17,9 @@
 #ifndef __GRAY_H__
 #define __GRAY_H__
 
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
 
 #ifdef __cplusplus
 extern "C" {

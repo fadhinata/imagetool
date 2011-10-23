@@ -18,10 +18,10 @@
 #define __CHAINCODE_H__
 
 #include <common.h>
-#include <dwordmap.h>
-#include <bitmap.h>
-#include <dlink.h>
-#include <point_list.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/bitmap.h>
+#include <buffering/dlink.h>
+#include <geometry/point_list.h>
 
 #ifdef __cplusplus
 extern "C" {

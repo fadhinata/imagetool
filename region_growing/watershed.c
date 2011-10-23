@@ -20,13 +20,13 @@
 #include <stdint.h>
 #include <limits.h>
 
-#include <dwordmap.h>
-#include <wordmap.h>
-#include <bytemap.h>
-#include <neighbor.h>
-#include <point.h>
-#include <dlink.h>
-#include <watershed.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/bytemap.h>
+#include <geometry/neighbor.h>
+#include <geometry/point.h>
+#include <buffering/dlink.h>
+#include <region_growing/watershed.h>
 
 /* Vincent-Soille watershed algorithm
    Watershed-by-Immersion
@@ -69,7 +69,7 @@ static void fifo_add(xy_t *p, dlist_t *x)
   dlist_insert(link, x);
 }
 
-int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *image, neighbor_t *type)
+int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *image, neighbor_t type)
 {
   int x, y, i, j, k, w, h, u, n, neighbor, pitch;
   uint32_t val, label, plabel, label_of_mindist, curlabel;
@@ -185,16 +185,16 @@ int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *ima
     p = sorted_coord_base[u];
     for (n = 0; n < histogram[u]; n++, p++) {
       x = p->x; y = p->y;
-      dwordmap_put_value(MASK, x, y, labelmap);
+      dwordmap_put_value(MASK, labelmap, x, y);
       // for a neighbour of p
       for (k = 0; k < neighbor; k++) {
 	j = x + dx[k]; if (!(j >= 0 && j < w)) continue;
 	i = y + dy[k]; if (!(i >= 0 && i < h)) continue;
-	label = dwordmap_get_value(j, i, labelmap);
+	label = dwordmap_get_value(labelmap, j, i);
 	if (!(label == INIT || label == MASK) &&
 	    (label > 0 || label == WSHED)) {
 	  fifo_add(p, queue);
-	  dwordmap_put_value(1, x, y, distmap);
+	  dwordmap_put_value(1, distmap, x, y);
 	}
       }
     }
@@ -220,15 +220,15 @@ int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *ima
 
       // labelling p by inspecting neighbours
       x = p->x; y = p->y;
-      plabel = dwordmap_get_value(x, y, labelmap);
+      plabel = dwordmap_get_value(labelmap, x, y);
       //printf("For connected pixel (%d, %d)\n", x, y);
       //printf("Its neighbors are:\n");
       for (k = 0; k < neighbor; k++) {
 	j = x + dx[k]; if (!(j >= 0 && j < w)) continue;
 	i = y + dy[k]; if (!(i >= 0 && i < h)) continue;
 	//printf("%d: (%d, %d)\n", k, j, i);
-	label = dwordmap_get_value(j, i, labelmap);
-	dist = dwordmap_get_value(j, i, distmap);
+	label = dwordmap_get_value(labelmap, j, i);
+	dist = dwordmap_get_value(distmap, j, i);
 
 #ifndef VINCENT_SOILLE
 	if (!(label == INIT || label == MASK) &&
@@ -275,21 +275,21 @@ int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *ima
 			     (label > 0 || label == WSHED))) {
 	if (label > 0) {
 	  if (plabel == MASK || plabel == WSHED) {
-	    dwordmap_put_value(label, x, y, labelmap);
+	    dwordmap_put_value(label, labelmap, x, y);
 	    if (info) {
 	      xsum[label] += x;
 	      ysum[label] += y;
 	      pixels[label]++;
 	    }
 	  } else if (plabel != label) {
-	    dwordmap_put_value(WSHED, x, y, labelmap);
+	    dwordmap_put_value(WSHED, labelmap, x, y);
 	  }
 	} else if (plabel == MASK) {
-	  dwordmap_put_value(WSHED, x, y, labelmap);
+	  dwordmap_put_value(WSHED, labelmap, x, y);
 	}
       } else if (label == MASK && dist == 0) {
 	// (j, i) is plateau pixel
-	dwordmap_put_value(curdist + 1, j, i, distmap);
+	dwordmap_put_value(curdist + 1, distmap, j, i);
 	fifo_add(coord_map[i * w + j], queue);
       }
     }
@@ -302,13 +302,13 @@ int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *ima
     for (n = 0; n < histogram[u]; n++, p++) {
       x = p->x;
       y = p->y;
-      dwordmap_put_value(0, x, y, distmap);
+      dwordmap_put_value(0, distmap, x, y);
       // p is inside a new minimum
-      if (dwordmap_get_value(x, y, labelmap) == MASK) {
+      if (dwordmap_get_value(labelmap, x, y) == MASK) {
 	// creaet new label
 	curlabel++;
 	fifo_add(p, queue);
-	dwordmap_put_value(curlabel, x, y, labelmap);
+	dwordmap_put_value(curlabel, labelmap, x, y);
 	if (info) {
 	  xsum[curlabel] = x;
 	  ysum[curlabel] = y;
@@ -319,9 +319,9 @@ int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *ima
 	  for (k = 0; k < neighbor; k++) {
 	    j = q->x + dx[k]; if (!(j >= 0 && j < w)) continue;
 	    i = q->y + dy[k]; if (!(i >= 0 && i < h)) continue;
-	    if (dwordmap_get_value(j, i, labelmap) == MASK) {
+	    if (dwordmap_get_value(labelmap, j, i) == MASK) {
 	      fifo_add(coord_map[i * w + j], queue);
-	      dwordmap_put_value(curlabel, j, i, labelmap);
+	      dwordmap_put_value(curlabel, labelmap, j, i);
               if (info) {
 		xsum[curlabel] += j;
 		ysum[curlabel] += i;
@@ -365,7 +365,7 @@ int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *ima
   return curlabel + 1; // maximum label value
 }
 
-int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *image, neighbor_t *type)
+int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *image, neighbor_t type)
 {
   int i, j, k, u, n, x, y, w, h, neighbor, pitch;
   uint32_t val, label, plabel, label_of_mindist, curlabel;
@@ -472,16 +472,16 @@ int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *ima
     p = sorted_coord_base[u];
     for (n = 0; n < histogram[u]; n++, p++) {
       x = p->x; y = p->y;
-      dwordmap_put_value(MASK, x, y, labelmap);
+      dwordmap_put_value(MASK, labelmap, x, y);
       // for a neighbour of p
       for (k = 0; k < neighbor; k++) {
 	j = x + dx[k]; if (!(j >= 0 && j < w)) continue;
 	i = y + dy[k]; if (!(i >= 0 && i < h)) continue;
-	label = dwordmap_get_value(j, i, labelmap);
+	label = dwordmap_get_value(labelmap, j, i);
 	if (!(label == INIT || label == MASK) &&
 	    (label > 0 || label == WSHED)) {
 	  fifo_add(p, queue);
-	  dwordmap_put_value(1, x, y, distmap);
+	  dwordmap_put_value(1, distmap, x, y);
 	}
       }
     }
@@ -507,15 +507,15 @@ int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *ima
 
       // labelling p by inspecting neighbours
       x = p->x; y = p->y;
-      plabel = dwordmap_get_value(x, y, labelmap);
+      plabel = dwordmap_get_value(labelmap, x, y);
       //printf("For connected pixel (%d, %d)\n", x, y);
       //printf("Its neighbors are:\n");
       for (k = 0; k < neighbor; k++) {
 	j = x + dx[k]; if (!(j >= 0 && j < w)) continue;
 	i = y + dy[k]; if (!(i >= 0 && i < h)) continue;
 	//printf("%d: (%d, %d)\n", k, j, i);
-	label = dwordmap_get_value(j, i, labelmap);
-	dist = dwordmap_get_value(j, i, distmap);
+	label = dwordmap_get_value(labelmap, j, i);
+	dist = dwordmap_get_value(distmap, j, i);
 
 #ifndef VINCENT_SOILLE
 	if (!(label == INIT || label == MASK) &&
@@ -562,21 +562,21 @@ int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *ima
 			       (label > 0 || label == WSHED))) {
 	  if (label > 0) {
 	    if (plabel == MASK || plabel == WSHED) {
-	      dwordmap_put_value(label, x, y, labelmap);
+	      dwordmap_put_value(label, labelmap, x, y);
 	      if (info) {
 		xsum[label] += x;
 		ysum[label] += y;
 		pixels[label]++;
 	      }
 	    } else if (plabel != label) {
-	      dwordmap_put_value(WSHED, x, y, labelmap);
+	      dwordmap_put_value(WSHED, labelmap, x, y);
 	    }
 	  } else if (plabel == MASK) {
-	    dwordmap_put_value(WSHED, x, y, labelmap);
+	    dwordmap_put_value(WSHED, labelmap, x, y);
 	  }
 	} else if (label == MASK && dist == 0) {
 	  // (j, i) is plateau pixel
-	  dwordmap_put_value(curdist + 1, j, i, distmap);
+	  dwordmap_put_value(curdist + 1, distmap, j, i);
 	  fifo_add(coord_map[i * w + j], queue);
 	}
       }
@@ -589,13 +589,13 @@ int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *ima
     for (n = 0; n < histogram[u]; n++, p++) {
       x = p->x;
       y = p->y;
-      dwordmap_put_value(0, x, y, distmap);
+      dwordmap_put_value(0, distmap, x, y);
       // p is inside a new minimum
-      if (dwordmap_get_value(x, y, labelmap) == MASK) {
+      if (dwordmap_get_value(labelmap, x, y) == MASK) {
 	// creaet new label
 	curlabel++;
 	fifo_add(p, queue);
-	dwordmap_put_value(curlabel, x, y, labelmap);
+	dwordmap_put_value(curlabel, labelmap, x, y);
 	if (info) {
 	  xsum[curlabel] = x;
 	  ysum[curlabel] = y;
@@ -606,9 +606,9 @@ int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *ima
 	  for (k = 0; k < neighbor; k++) {
 	    j = q->x + dx[k]; if (!(j >= 0 && j < w)) continue;
 	    i = q->y + dy[k]; if (!(i >= 0 && i < h)) continue;
-	    if (dwordmap_get_value(j, i, labelmap) == MASK) {
+	    if (dwordmap_get_value(labelmap, j, i) == MASK) {
 	      fifo_add(coord_map[i * w + j], queue);
-	      dwordmap_put_value(curlabel, j, i, labelmap);
+	      dwordmap_put_value(curlabel, labelmap, j, i);
               if (info) {
 		xsum[curlabel] += j;
 		ysum[curlabel] += i;

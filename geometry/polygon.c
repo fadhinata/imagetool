@@ -21,9 +21,9 @@
 #include <string.h>
 
 #include <common.h>
-#include <dlink.h>
-#include <polygon.h>
-#include <point.h>
+#include <buffering/dlink.h>
+#include <geometry/polygon.h>
+#include <geometry/point.h>
 
 int is_in_polygon(int x, int y, polygon_t *polygon)
 {

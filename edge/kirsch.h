@@ -18,10 +18,10 @@
 #define __KIRSCH_H__
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {

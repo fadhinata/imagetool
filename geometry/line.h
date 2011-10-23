@@ -18,7 +18,7 @@
 #define __LINE_H__
 
 #include <common.h>
-#include <point.h>
+#include <geometry/point.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -203,17 +203,16 @@ LoadDIBitmap(const char *filename, /* I - File to load */
     int              infosize;     /* Size of header information */
     BITMAPFILEHEADER header;       /* File header */
 
-
     /* Try opening the file; use "rb" mode to read this *binary* file. */
     if ((fp = fopen(filename, "rb")) == NULL)
         return (NULL);
 
     /* Read the file header and any following bitmap information... */
-    header.bfType      = read_word(fp);
-    header.bfSize      = read_dword(fp);
-    header.bfReserved1 = read_word(fp);
-    header.bfReserved2 = read_word(fp);
-    header.bfOffBits   = read_dword(fp);
+    header.bfType      = read_word(fp); // 2 bytes
+    header.bfSize      = read_dword(fp); // 4 bytes
+    header.bfReserved1 = read_word(fp); // 2 bytes
+    header.bfReserved2 = read_word(fp); // 2 bytes
+    header.bfOffBits   = read_dword(fp); // 4 bytes
 
     /* Check for BM reversed... */
     if (header.bfType != BF_TYPE) {
@@ -222,33 +221,35 @@ LoadDIBitmap(const char *filename, /* I - File to load */
         return (NULL);
     }
 
-    infosize = header.bfOffBits - 18;
+    infosize = header.bfOffBits - 14; //sizeof(BITMAPFILEHEADER)/*18*/;
     if ((*info = (BITMAPINFO *)malloc(sizeof(BITMAPINFO))) == NULL) {
         /* Couldn't allocate memory for bitmap info - return NULL... */
         fclose(fp);
         return (NULL);
     }
 
-    (*info)->bmiHeader.biSize          = read_dword(fp);
-    (*info)->bmiHeader.biWidth         = read_long(fp);
-    (*info)->bmiHeader.biHeight        = read_long(fp);
-    (*info)->bmiHeader.biPlanes        = read_word(fp);
-    (*info)->bmiHeader.biBitCount      = read_word(fp);
-    (*info)->bmiHeader.biCompression   = read_dword(fp);
-    (*info)->bmiHeader.biSizeImage     = read_dword(fp);
-    (*info)->bmiHeader.biXPelsPerMeter = read_long(fp);
-    (*info)->bmiHeader.biYPelsPerMeter = read_long(fp);
-    (*info)->bmiHeader.biClrUsed       = read_dword(fp);
-    (*info)->bmiHeader.biClrImportant  = read_dword(fp);
+    (*info)->bmiHeader.biSize          = read_dword(fp); // 4
+    (*info)->bmiHeader.biWidth         = read_long(fp); // 4
+    (*info)->bmiHeader.biHeight        = read_long(fp); // 4
+    (*info)->bmiHeader.biPlanes        = read_word(fp); // 2
+    (*info)->bmiHeader.biBitCount      = read_word(fp); // 2
+    (*info)->bmiHeader.biCompression   = read_dword(fp); // 4
+    (*info)->bmiHeader.biSizeImage     = read_dword(fp); // 4
+    (*info)->bmiHeader.biXPelsPerMeter = read_long(fp); // 4
+    (*info)->bmiHeader.biYPelsPerMeter = read_long(fp); // 4
+    (*info)->bmiHeader.biClrUsed       = read_dword(fp); // 4
+    (*info)->bmiHeader.biClrImportant  = read_dword(fp); // 4
 
-    if (infosize > 40) {
-	if (fread((*info)->bmiColors, infosize - 40, 1, fp) < 1) {
+    if (infosize > sizeof(BITMAPINFOHEADER)) {
+	if (fread((*info)->bmiColors, infosize - sizeof(BITMAPINFOHEADER), 1, fp) < 1) {
             /* Couldn't read the bitmap header - return NULL... */
             free(*info);
             fclose(fp);
             return (NULL);
         }
     }
+
+    //if (bmpinfo->bmiHeader.biBitCount == 8);
 
     /* Now that we have all the header info read in, allocate memory for *
      * the bitmap and read *it* in...                                    */
@@ -257,9 +258,11 @@ LoadDIBitmap(const char *filename, /* I - File to load */
                    (*info)->bmiHeader.biBitCount + 7) / 8 *
   	           abs((*info)->bmiHeader.biHeight);
 
+    printf("bitsize:%d\n", bitsize);
     if ((bits = (unsigned char *)malloc(bitsize)) == NULL) {
         /* Couldn't allocate memory - return NULL! */
-        free(*info);
+      printf("Couldn't allocate memory - return NULL!\n");
+      free(*info);
         fclose(fp);
         return (NULL);
     }
@@ -272,6 +275,7 @@ LoadDIBitmap(const char *filename, /* I - File to load */
         return (NULL);
     }
 
+#if 0
     /* Swap red and blue */
     length = ((*info)->bmiHeader.biWidth * 3 + 3) & ~3;
     for (y = 0; y < (*info)->bmiHeader.biHeight; y ++) {
@@ -282,7 +286,7 @@ LoadDIBitmap(const char *filename, /* I - File to load */
 	    ptr[2] = temp;
 	}
     }
-
+#endif
     /* OK, everything went fine - return the allocated bitmap... */
     fclose(fp);
     return (bits);

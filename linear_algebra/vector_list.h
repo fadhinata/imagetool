@@ -17,8 +17,8 @@
 #ifndef __VECTOR_LIST_H__
 #define __VECTOR_LIST_H__
 
-#include <dlink.h>
-#include <vector.h>
+#include <buffering/dlink.h>
+#include <linear_algebra/vector.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -18,11 +18,12 @@
 // Reference by 
 // region growing: A New Approach - S. A. Hojjatoleslami and J. Kittler */
 #include <string.h>
+
 #include <common.h>
-#include <dwordmap.h>
-#include <bytemap.h>
-#include <bitmap.h>
-#include <regiongrow.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/bitmap.h>
+#include <region_growing/regiongrow.h>
 
 /* Reference by 
    region growing: A New Approach - S. A. Hojjatoleslami and J. Kittler
@@ -76,10 +77,10 @@ int region_growing_by_contrast(bitmap_t *region, bytemap_t *image, neighbor_t ty
   ymin = ymax = yseed;
 
   mark[yseed * w + xseed] = 1;
-  bitmap_set_value(xseed, yseed, region);
+  bitmap_set_value(region, xseed, yseed);
   xsave[0] = xseed;
   ysave[0] = yseed;
-  current_region = bytemap_get_value(xseed, yseed, image);
+  current_region = bytemap_get_value(image, xseed, yseed);
   count = 1;
 
   while (1) {
@@ -97,7 +98,7 @@ int region_growing_by_contrast(bitmap_t *region, bytemap_t *image, neighbor_t ty
       for (x = xmin; x <= xmax; x++) {
 	if (!(x >= 0 && x < w)) continue;
 
-	val = bytemap_get_value(x, y, image);
+	val = bytemap_get_value(image, x, y);
         if (mark[y * w + x] == 1) {
           // current region
           for (k = 0; k < neighbor; k++) {
@@ -149,7 +150,7 @@ int region_growing_by_contrast(bitmap_t *region, bytemap_t *image, neighbor_t ty
 
 	if (mark[y * w + x] == 1) continue;
 
-	val = bytemap_get_value(x, y, image);
+	val = bytemap_get_value(image, x, y);
         if (val <= maxval) continue;
 
         for (k = 0; k < neighbor; k++) {
@@ -172,7 +173,7 @@ int region_growing_by_contrast(bitmap_t *region, bytemap_t *image, neighbor_t ty
     if (maxval == 0) break;
 
     mark[ysave[count] * w + xsave[count]] = 1;
-    bitmap_set_value(xsave[count], ysave[count], region);
+    bitmap_set_value(region, xsave[count], ysave[count]);
     current_region += maxval;
     count++;
   }

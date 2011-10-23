@@ -20,10 +20,10 @@
 #include <assert.h>
 
 #include <common.h>
-#include <bitmap.h>
-#include <complex2.h>
-#include <matrix.h>
-#include <matrix_statistic.h>
+#include <pixmap/bitmap.h>
+#include <linear_algebra/complex2.h>
+#include <linear_algebra/matrix.h>
+#include <statistics/matrix_statistic.h>
 
 //#define BUG_FIX
 #undef BUG_FIX

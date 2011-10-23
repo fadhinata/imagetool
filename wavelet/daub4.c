@@ -17,15 +17,19 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
-#include <daub4.h>
 #include <assert.h>
+
+#include <wavelet/daub4.h>
 
 #define SQRT3 1.732050808
 
-#define H0 0.4829629131
-#define H1 0.8365163036
-#define H2 0.2241438679
-#define H3 -0.1294095226
+// forward transform scaling (smoothing) coefficients
+#define H0 0.4829629131  // (1 + sqrt(3) / (4 * sqrt(2))
+#define H1 0.8365163036  // (3 + sqrt(3) / (4 * sqrt(2))
+#define H2 0.2241438679  // (3 - sqrt(3) / (4 * sqrt(2))
+#define H3 -0.1294095226 // (1 - sqrt(3) / (4 * sqrt(2))
+
+// forward transform wavelet coefficients
 #define G0 H3
 #define G1 -H2
 #define G2 H1
@@ -35,72 +39,85 @@
 #define IH1 G2
 #define IH2 H0
 #define IH3 G0
+
 #define IG0 H3
 #define IG1 G3
 #define IG2 H1
 #define IG3 G1
 
-/* The Daubechies D4 Wavelet Transform */
-void d4fwt(vector_t *q, vector_t *p)
+// The Daubechies D4 Wavelet Transform
+void daub4_fwt(vector_t *q, vector_t *p)
 {
   int i, j, n;
   int half;
-  double *temp;
+  real_t *temp;
 	
   assert(q);
   assert(p);
-  assert(q->length == p->length);
-  assert(p->length >= 4);
+  assert(vector_get_dimension(q) == vector_get_dimension(p));
+  assert(vector_get_dimension(p) >= 4);
 	
-  n = p->length;
-  temp = (double *)malloc(n*sizeof(double));
+  n = vector_get_dimension(p);
+
+  temp = (real_t *)malloc(n * sizeof(real_t));
   assert(temp);
 
-  memcpy(q->real, p->real, n*sizeof(double));
+  vector_copy(q, p);
 
   for (; n >= 4; n >>= 1) {
-    half = n>>1;
+    // Forward Daubechies D4 transform
+    half = n >> 1;
     i = 0;
     for (i = 0, j = 0; j < n-3; j += 2, i++) {
-      temp[i]      = *(q->real+j)*H0+*(q->real+j+1)*H1+*(q->real+j+2)*H2+*(q->real+j+3)*H3;
-      temp[i+half] = *(q->real+j)*G0+*(q->real+j+1)*G1+*(q->real+j+2)*G2+*(q->real+j+3)*G3;
+      temp[i]      = (vector_get_value(q, j)   * H0 + vector_get_value(q, j+1) * H1 +
+		      vector_get_value(q, j+2) * H2 + vector_get_value(q, j+3) * H3);
+      temp[half+i] = (vector_get_value(q, j)   * G0 + vector_get_value(q, j+1) * G1 +
+		      vector_get_value(q, j+2) * G2 + vector_get_value(q, j+3) * G3);
     }
-    temp[i]      = *(q->real+n-2)*H0+*(q->real+n-1)*H1+*(q->real)*H2+*(q->real+1)*H3;
-    temp[i+half] = *(q->real+n-2)*G0+*(q->real+n-1)*G1+*(q->real)*G2+*(q->real+1)*G3;
-    for (i = 0; i < n; i++) *(q->real+i) = temp[i];
+    temp[i]      = (vector_get_value(q, n-2) * H0 + vector_get_value(q, n-1) * H1 +
+		    vector_get_value(q, 0)   * H2 + vector_get_value(q, 1)   * H3);
+    temp[half+i] = (vector_get_value(q, n-2) * G0 + vector_get_value(q, n-1) * G1 +
+		    vector_get_value(q, 0)   * G2 + vector_get_value(q, 1)   * G3);
+    for (i = 0; i < n; i++) vector_put_value(temp[i], q, i);
   }
   free(temp);
 }
 
-void id4fwt(vector_t *q, vector_t *p)
+void daub4_ifwt(vector_t *q, vector_t *p)
 {
   int i, j, n;
   int half;
-  double *temp;
+  real_t *temp;
 	
   assert(q);
   assert(p);
-  assert(q->length == p->length);
-  assert(p->length >= 4);
+  assert(vector_get_dimension(q) == vector_get_dimension(p));
+  assert(vector_get_dimension(p) >= 4);
 	
-  n = p->length;
-  temp = (double *)malloc(n*sizeof(double));
+  n = vector_get_dimension(p);
+
+  temp = (real_t *)malloc(n * sizeof(real_t));
   assert(temp);
 
-  memcpy(q->real, p->real, n*sizeof(double));
+  vector_copy(q, p);
 	
-  for (n = 4; n <= p->length; n <<= 1) {
-    half = n>>1;
-    //      last smooth val  last coef.  first smooth  first coef
-    temp[0] = *(p->real+half-1)*IH0 + *(p->real+n-1)*IH1 + *(p->real)*IH2 + *(p->real+half)*IH3;
-    temp[1] = *(p->real+half-1)*IG0 + *(p->real+n-1)*IG1 + *(p->real)*IG2 + *(p->real+half)*IG3;
-    for (i = 0, j = 2; i < half-1; i++) {
+  for (n = 4; n <= vector_get_dimension(p); n <<= 1) {
+    half = n >> 1;
+    // last smooth val  last coef.  first smooth  first coef
+    temp[0] = (vector_get_value(q, half-1) * IH0 + vector_get_value(q, n-1)  * IH1 +
+	       vector_get_value(q, 0)      * IH2 + vector_get_value(q, half) * IH3);
+    temp[1] = (vector_get_value(q, half-1) * IG0 + vector_get_value(q, n-1)  * IG1 +
+	       vector_get_value(q, 0)      * IG2 + vector_get_value(q, half) * IG3);
+
+    for (i = 0, j = 2; i < half - 1; i++) {
       //     smooth val     coef. val       smooth val     coef. val
-      temp[j++] = *(p->real+i)*IH0 + *(p->real+i+half)*IH1 + *(p->real+i+1)*IH2 + *(p->real+i+half+1)*IH3;
-      temp[j++] = *(p->real+i)*IG0 + *(p->real+i+half)*IG1 + *(p->real+i+1)*IG2 + *(p->real+i+half+1)*IG3;
+      temp[j++] = (vector_get_value(q, i)   * IH0 + vector_get_value(q, half)   * IH1 +
+		   vector_get_value(q, i+1) * IH2 + vector_get_value(q, half+1) * IH3);
+      temp[j++] = (vector_get_value(q, i)   * IH0 + vector_get_value(q, half)   * IH1 +
+		   vector_get_value(q, i+1) * IH2 + vector_get_value(q, half+1) * IH3);
     }
-    for (i = 0; i < n; i++) *(p->real+i) = temp[i];
-  }
+    for (i = 0; i < n; i++) vector_put_value(temp[i], p, i);
+ }
   free(temp);
 }
 

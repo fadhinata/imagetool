@@ -17,12 +17,18 @@
 #ifndef __GRAM_SCHMIDT_H__
 #define __GRAM_SCHMIDT_H__
 
-#include <vector.h>
-#include <matrix.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/matrix.h>
+#include <linear_algebra/vector_list.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+  int vector_list_create_gram_schmidt_process(vector_list_t *q, vector_list_t *p);
+  int cvector_list_create_gram_schmidt_process(vector_list_t *q, vector_list_t *p);
+  matrix_t *matrix_new_and_gram_schmidt_process(matrix_t *p);
+  matrix_t *cmatrix_new_and_gram_schmidt_process(matrix_t *p);
 
   int vector_gram_schmidt_process(vector_t **q, vector_t **p, int n);
   int cvector_gram_schmidt_process(vector_t **q, vector_t **p, int n);

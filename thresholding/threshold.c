@@ -18,10 +18,10 @@
 #include <assert.h>
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <linear_algebra/matrix.h>
 
 void bytemap_threshold(bitmap_t *bin, bytemap_t *im, int cutup, int cutdown)
 {

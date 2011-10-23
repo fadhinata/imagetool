@@ -19,9 +19,9 @@
 #include <math.h>
 #include <assert.h>
 
-#include <complex2.h>
-#include <vector.h>
-#include <vector_statistic.h>
+#include <linear_algebra/complex2.h>
+#include <linear_algebra/vector.h>
+#include <statistics/vector_statistic.h>
 
 complex_t cvector_get_mean(vector_t *vec)
 {
@@ -30,8 +30,8 @@ complex_t cvector_get_mean(vector_t *vec)
   assert(vec);
 
   mean = cvector_get_sum(vec);
-  mean.real /= (real_t)vector_get_length(vec);
-  mean.imag /= (real_t)vector_get_length(vec);
+  mean.real /= (real_t)vector_get_dimension(vec);
+  mean.imag /= (real_t)vector_get_dimension(vec);
 
   return mean;
 }
@@ -45,7 +45,7 @@ real_t vector_get_2nd_moment(vector_t *vec, real_t org)
 
   tmp = vector_new_and_copy(vec);
   vector_copy_vector_subtract_scalar(tmp, vec, org);
-  moment = vector_get_norm(tmp) / (real_t)vector_get_length(tmp);
+  moment = vector_get_norm(tmp) / (real_t)vector_get_dimension(tmp);
   vector_destroy(tmp);
 
   return moment;
@@ -61,7 +61,7 @@ real_t ivector_get_2nd_moment(vector_t *vec, real_t org)
 
   tmp = vector_new_and_copy(vec);
   ivector_copy_ivector_subtract_scalar(tmp, vec, org);
-  moment = ivector_get_norm(tmp) / vector_get_length(tmp);
+  moment = ivector_get_norm(tmp) / vector_get_dimension(tmp);
   vector_destroy(tmp);
 
   return moment;
@@ -77,8 +77,8 @@ complex_t cvector_get_2nd_moment(vector_t *vec, complex_t org)
   tmp = vector_new_and_copy(vec);
   cvector_copy_cvector_subtract_scalar(tmp, vec, org);
   moment = cvector_get_norm(tmp);
-  moment.real /= (real_t)vector_get_length(tmp);
-  moment.imag /= (real_t)vector_get_length(tmp);
+  moment.real /= (real_t)vector_get_dimension(tmp);
+  moment.imag /= (real_t)vector_get_dimension(tmp);
   vector_destroy(tmp);
 
   return moment;
@@ -115,16 +115,16 @@ int vector_read_moments(real_t *scnd, real_t *thrd, real_t *frth, vector_t *vec,
   vector_copy_vector_subtract_scalar(diff, vec, org);
   vector_copy_vector_multiply_vector(moment, diff, diff);
 
-  *scnd = vector_get_sum(moment) / vector_get_length(moment);
+  *scnd = vector_get_sum(moment) / vector_get_dimension(moment);
   vector_multiply_vector(moment, diff);
-  *thrd = vector_get_sum(moment) / vector_get_length(moment);
+  *thrd = vector_get_sum(moment) / vector_get_dimension(moment);
   vector_multiply_vector(moment, diff);
-  *frth = vector_get_sum(moment) / vector_get_length(moment);
+  *frth = vector_get_sum(moment) / vector_get_dimension(moment);
 
   vector_destroy(diff);
   vector_destroy(moment);
 
-  return vector_get_length(vec);
+  return vector_get_dimension(vec);
 }
 
 int ivector_read_moments(real_t *scnd, real_t *thrd, real_t *frth, vector_t *vec, real_t org)
@@ -141,16 +141,16 @@ int ivector_read_moments(real_t *scnd, real_t *thrd, real_t *frth, vector_t *vec
   ivector_copy_ivector_subtract_scalar(diff, vec, org);
   ivector_copy_ivector_multiply_ivector(moment, diff, diff);
 
-  *scnd = ivector_get_sum(moment) / vector_get_length(moment);
+  *scnd = ivector_get_sum(moment) / vector_get_dimension(moment);
   ivector_multiply_ivector(moment, diff);
-  *thrd = ivector_get_sum(moment) / vector_get_length(moment);
+  *thrd = ivector_get_sum(moment) / vector_get_dimension(moment);
   ivector_multiply_ivector(moment, diff);
-  *frth = ivector_get_sum(moment) / vector_get_length(moment);
+  *frth = ivector_get_sum(moment) / vector_get_dimension(moment);
 
   vector_destroy(diff);
   vector_destroy(moment);
 
-  return vector_get_length(vec);
+  return vector_get_dimension(vec);
 }
 
 int cvector_read_moments(complex_t *scnd, complex_t *thrd, complex_t *frth, vector_t *vec, complex_t org)
@@ -168,7 +168,7 @@ int cvector_read_moments(complex_t *scnd, complex_t *thrd, complex_t *frth, vect
   cvector_copy_cvector_subtract_scalar(diff, vec, org);
   cvector_copy_cvector_multiply_cvector(moment, diff, diff);
 
-  n = vector_get_length(vec);
+  n = vector_get_dimension(vec);
   *scnd = cvector_get_sum(moment);
   scnd->real /= (real_t)n, scnd->imag /= (real_t)n;
   cvector_multiply_cvector(moment, diff);

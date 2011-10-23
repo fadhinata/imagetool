@@ -19,7 +19,7 @@
 #include <math.h>
 #include <assert.h>
 
-#include <median_smooth.h>
+#include <smoothing/median_smooth.h>
 
 void median_smooth(bytemap_t *q, bytemap_t *p, int bsize)
 {

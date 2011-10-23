@@ -17,17 +17,17 @@
 #ifndef __DAUB4_H__
 #define __DAUB4_H__
 
-#include <vector.h>
-#include <matrix.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  void d4fwt(vector_t *q, vector_t *p);
-  void id4fwt(vector_t *q, vector_t *p);
-  int d4fwt2(matrix_t *q, matrix_t *p);
-  int id4fwt2(matrix_t *q, matrix_t *p);
+  void daub4_fwt(vector_t *q, vector_t *p);
+  void daub4_ifwt(vector_t *q, vector_t *p);
+  int daub4_fwt2(matrix_t *q, matrix_t *p);
+  int daub4_ifwt2(matrix_t *q, matrix_t *p);
 
 #ifdef __cplusplus
 }

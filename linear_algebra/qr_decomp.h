@@ -17,14 +17,14 @@
 #ifndef __QR_DECOMP_H__
 #define __QR_DECOMP_H__
 
-#include <matrix.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int matrix_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p);
-int cmatrix_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p);
+  void matrix_new_and_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p);
+  void cmatrix_new_and_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p);
 
 #ifdef __cplusplus
 }

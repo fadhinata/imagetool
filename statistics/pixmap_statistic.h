@@ -17,13 +17,12 @@
 #ifndef __PIXMAP_STATISTIC_H__
 #define __PIXMAP_STATISTIC_H__
 
-#include <stdint.h>
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <floatmap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/floatmap.h>
 
 #ifdef __cplusplus
 extern "C" {

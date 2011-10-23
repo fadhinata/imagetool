@@ -18,8 +18,8 @@
 #ifndef __HSL_H__
 #define __HSL_H__
 
-#include <bytemap.h>
-#include <floatmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/floatmap.h>
 
 #ifdef __cplusplus
 extern "C" {

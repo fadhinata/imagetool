@@ -21,8 +21,8 @@
 #include <string.h>
 
 #include <common.h>
-#include <triangle.h>
-#include <triangle_list.h>
+#include <geometry/triangle.h>
+#include <geometry/triangle_list.h>
 
 void triangle_list_copy(triangle_list_t *copyer, triangle_list_t *copee)
 {

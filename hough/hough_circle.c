@@ -21,7 +21,7 @@
 #include <assert.h>
 
 #include <common.h>
-#include <hough_circle.h>
+#include <hough/hough_circle.h>
 
 hough_circle_t *hough_circle_new(real_t xmin, real_t xmax, int nx, real_t ymin, real_t ymax, int ny, real_t rmin, real_t rmax, int nr)
 {
@@ -85,13 +85,13 @@ int hough_circle_get_sorted_index(int *xindex, int *yindex, int *rindex, int n, 
     cell = *(hough->cell + r);
     for (y = 0; y < dwordmap_get_height(cell); y++) {
       for (x = 0; x < dwordmap_get_width(cell); x++) {
-	val = dwordmap_get_value(x, y, cell);
+	val = dwordmap_get_value(cell, x, y);
 	if (val == 0) continue;
 	//printf("val %d\n", val);
 	// Find a proper bin from the sorted indeces according to val.
 	for (i = 0; i < cnt; i++) {
 	  cell2 = *(hough->cell + rindex[i]);
-	  tmp = dwordmap_get_value(xindex[i], yindex[i], cell2);
+	  tmp = dwordmap_get_value(cell2, xindex[i], yindex[i]);
 	  if (tmp < val) break;
 	}
 	//printf("1. i %d cnt %d\n", i, cnt);
@@ -172,7 +172,7 @@ void hough_circle_accumulate(hough_circle_t *hough, bitmap_t *bin)
     ybias = (real_t)y - h / 2.0;
 
     for (x = 0; x < w; x++) {
-      if (bitmap_isreset(x, y, bin)) continue;
+      if (bitmap_isreset(bin, x, y)) continue;
       //printf(".");
 
       xbias = (real_t)x - w / 2.0;
@@ -186,20 +186,20 @@ void hough_circle_accumulate(hough_circle_t *hough, bitmap_t *bin)
 	if (i >= 0 && i < dwordmap_get_height(cell)) {
 	  j = (int)round(((xbias + r) - hough->amin) / hough->da);
 	  if (j >= 0 && j < dwordmap_get_width(cell))
-	    dwordmap_inc_value(j, i, cell);
+	    dwordmap_inc_value(cell, j, i);
 	  j = (int)round(((xbias - r) - hough->amin) / hough->da);
 	  if (j >= 0 && j < dwordmap_get_width(cell))
-	    dwordmap_inc_value(j, i, cell);
+	    dwordmap_inc_value(cell, j, i);
 	}
 
 	j = (int)round(((xbias + 0) - hough->amin) / hough->da);
 	if (j >= 0 && j < dwordmap_get_width(cell)) {
 	  i = (int)round(((ybias + r) - hough->bmin) / hough->db);
 	  if (i >= 0 && i < dwordmap_get_height(cell))
-	    dwordmap_inc_value(j, i, cell);
+	    dwordmap_inc_value(cell, j, i);
 	  i = (int)round(((ybias - r) - hough->bmin) / hough->db);
 	  if (i >= 0 && i < dwordmap_get_height(cell))
-	    dwordmap_inc_value(j, i, cell);
+	    dwordmap_inc_value(cell, j, i);
 	}
 
 	// draw arc 
@@ -213,11 +213,11 @@ void hough_circle_accumulate(hough_circle_t *hough, bitmap_t *bin)
 	      // quater 0 (xbias+dx, ybias+dy)
 	      j = (int)round(((xbias + dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	      // quater 1 (xbias-dx, ybias+dy)
 	      j = (int)round(((xbias - dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	    }
 
 	    i = (int)round(((ybias - dy) - hough->bmin) / hough->db);
@@ -225,11 +225,11 @@ void hough_circle_accumulate(hough_circle_t *hough, bitmap_t *bin)
 	      // quater 2 (xbias-dx, ybias-dy)
 	      j = (int)round(((xbias - dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	      // quater 3 (xbias+dx, ybias-dy)
 	      j = (int)round(((xbias + dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	    }
 	    dx -= hough->da;
 	    dy = sqrt(sqr(r) - sqr(dx)); //r*sin(acos(dx/r));
@@ -244,22 +244,22 @@ void hough_circle_accumulate(hough_circle_t *hough, bitmap_t *bin)
 	      // quater 0 (xbias+dx, ybias+dy)
 	      j = (int)round(((xbias + dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	      // quater 1 (xbias-dx, ybias+dy)
 	      j = (int)round(((xbias - dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	    }
 	    i = (int)round(((ybias - dy) - hough->bmin) / hough->db);
 	    if (i >= 0 && i < dwordmap_get_height(cell)) {
 	      // quater 2 (xbias-dx, ybias-dy)
 	      j = (int)round(((xbias - dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	      // quater 3 (xbias+dx, ybias-dy)
 	      j = (int)round(((xbias + dx) - hough->amin) / hough->da);
 	      if (j >= 0 && j < dwordmap_get_width(cell))
-		dwordmap_inc_value(j, i, cell);
+		dwordmap_inc_value(cell, j, i);
 	    }
 	    dy -= hough->db;
 	    dx = sqrt(sqr(r) - sqr(dy)); //r*cos(asin(dy/r));
@@ -315,7 +315,7 @@ void hough_circle_fast_accumulate(hough_circle_t *hough, matrix_t *grad, real_t 
 	if (i >= 0 && i < cell->header.height) {
 	  j = (int)round(((xbias + r * (*(gxbuf + x)) / magnitude) - hough->amin) / hough->da);
 	  if (j >= 0 && j < cell->header.width) {
-	    dwordmap_inc_value(j, i, cell);
+	    dwordmap_inc_value(cell, j, i);
 	    //(*(cell->buffer+i*cell->header.pitch/sizeof(*(cell->buffer))+j))++;
 	  }
 	}
@@ -382,7 +382,7 @@ void hough_circle_fast_accumulate_(hough_circle_t *hough, wordmap_t *gx, wordmap
 	if (i >= 0 && i < dwordmap_get_height(cell)) {
 	  j = (int)round(((xbias + r * (*(gxbuf + x)) / magnitude) - hough->amin) / hough->da);
 	  if (j >= 0 && j < dwordmap_get_width(cell))
-	    dwordmap_inc_value(j, i, cell);
+	    dwordmap_inc_value(cell, j, i);
 	}
       }
     }

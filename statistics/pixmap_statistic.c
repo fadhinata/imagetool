@@ -14,13 +14,12 @@
  You should have received a copy of the GNU Lesser General Public License
  along with this program; if not, please visit www.gnu.org.
 */
-#include <stdio.h>
 #include <stdint.h>
 #include <math.h>
 #include <assert.h>
 
 #include <common.h>
-#include <pixmap_statistic.h>
+#include <statistics/pixmap_statistic.h>
 
 #define GENERAL_MAP_GET_MIN_MAX(type, vmin, vmax, im) {			\
     int n;								\

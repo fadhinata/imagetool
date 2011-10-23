@@ -17,8 +17,8 @@
 #ifndef __GAMMA_H__
 #define __GAMMA_H__
 
-#include <bytemap.h>
-#include <wordmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
 
 #ifdef __cplusplus
 extern "C" {

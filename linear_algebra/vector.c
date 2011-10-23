@@ -23,8 +23,8 @@
 #include <assert.h>
 #include <float.h>
 
-#include <vector.h>
 #include <common.h>
+#include <linear_algebra/vector.h>
 
 vector_t *vector_new(int n, bool complex_or_not)
 {
@@ -37,7 +37,7 @@ vector_t *vector_new(int n, bool complex_or_not)
   memset(v, 0, sizeof(*v));
 
   v->reference = 0;
-  v->length = n;
+  v->dimension = n;
   v->real = (real_t *)malloc(n * sizeof(*(v->real)));
   assert(v->real);
   memset(v->real, 0, n * sizeof(*(v->real)));
@@ -72,35 +72,66 @@ int vector_cmp(vector_t *q, vector_t *p)
   assert(q);
   assert(p);
 
-  if (!(vector_get_length(q) == vector_get_length(p))) return -1;
+  if (!(vector_get_dimension(q) == vector_get_dimension(p))) return -1;
   
-  n = vector_get_length(p);
+  n = vector_get_dimension(p);
 
   for (i = 0; i < n; i++) {
-    u = vector_get_value(i, q);
-    v = vector_get_value(i, p);
+    u = vector_get_value(q, i);
+    v = vector_get_value(p, i);
     if (!(abs(u - v) < REAL_EPSILON)) return 1;
   }
   return 0;
 }
 
-void vector_copy(vector_t *copyer, vector_t *copee)
+vector_t *vector_copy(vector_t *copyer, vector_t *copee)
 {
   assert(copyer);
   assert(copee);
-  assert(vector_get_length(copyer) == vector_get_length(copee));
+  assert(vector_get_dimension(copyer) == vector_get_dimension(copee));
 
   memcpy(vector_get_buffer(copyer),
 	 vector_get_buffer(copee),
-	 vector_get_length(copee) * sizeof(real_t));
+	 vector_get_dimension(copee) * sizeof(real_t));
 
-  if (ivector_get_buffer(copee)) {
-    assert(ivector_get_buffer(copyer));
+  return copyer;
+}
 
-    memcpy(ivector_get_buffer(copyer),
-	   ivector_get_buffer(copee),
-	   vector_get_length(copee) * sizeof(real_t));
+vector_t *ivector_copy(vector_t *copyer, vector_t *copee)
+{
+  assert(copyer);
+  assert(vector_is_imaginary(copyer));
+  assert(copee);
+  assert(vector_is_imaginary(copee));
+  assert(vector_get_dimension(copyer) == vector_get_dimension(copee));
+
+  memcpy(ivector_get_buffer(copyer),
+	 ivector_get_buffer(copee),
+	 vector_get_dimension(copee) * sizeof(real_t));
+
+  return copyer;
+}
+
+vector_t *cvector_copy(vector_t *copyer, vector_t *copee)
+{
+  assert(copyer);
+  assert(copee);
+  assert(vector_get_dimension(copyer) == vector_get_dimension(copee));
+
+  // for real part
+  vector_copy(copyer, copee);
+
+  // for imaginary part
+  if (vector_is_imaginary(copee)) {
+    if (!vector_is_imaginary(copyer))
+      vector_attach_imaginary(copyer);
+    ivector_copy(copyer, copee);
+  } else {
+    if (vector_is_imaginary(copyer))
+      ivector_clear(copyer);
   }
+
+  return copyer;
 }
 
 vector_t *vector_new_and_copy(vector_t *vec)
@@ -109,8 +140,9 @@ vector_t *vector_new_and_copy(vector_t *vec)
 
   assert(vec);
 
-  v = vector_new(vector_get_length(vec), (ivector_get_buffer(vec) != NULL));
+  v = vector_new(vector_get_dimension(vec), vector_is_imaginary(vec));
   vector_copy(v, vec);
+  if (vector_is_imaginary(v)) ivector_copy(v, vec);
 
   return v;
 }
@@ -123,11 +155,11 @@ void vector_dump(vector_t *p)
 
   printf("vector = \n");
   if (ivector_get_buffer(p) != NULL) {
-    for (i = 0; i < vector_get_length(p); i++)
-      printf("%.4lf+i%.4lf ", vector_get_value(i, p), ivector_get_value(i, p));
+    for (i = 0; i < vector_get_dimension(p); i++)
+      printf("%.4lf+i%.4lf ", vector_get_value(p, i), ivector_get_value(p, i));
   } else {
-    for (i = 0; i < vector_get_length(p); i++)
-      printf("%.4lf ", vector_get_value(i, p));
+    for (i = 0; i < vector_get_dimension(p); i++)
+      printf("%.4lf ", vector_get_value(p, i));
   }
   printf("\n");
 }
@@ -144,12 +176,12 @@ void vector_dump(vector_t *p)
 
 int vector_iszero(vector_t *p, int start, int len)
 {
-  VECTOR_ISZERO(vector_get_buffer(p), vector_get_length(p), start, len);
+  VECTOR_ISZERO(vector_get_buffer(p), vector_get_dimension(p), start, len);
 }
 
 int ivector_iszero(vector_t *p, int start, int len)
 {
-  VECTOR_ISZERO(ivector_get_buffer(p), vector_get_length(p), start, len);
+  VECTOR_ISZERO(ivector_get_buffer(p), vector_get_dimension(p), start, len);
 }
 
 int cvector_iszero(vector_t *p, int start, int len)
@@ -172,18 +204,18 @@ int cvector_iszero(vector_t *p, int start, int len)
 
 void vector_bezero(vector_t *p, int start, int len)
 {
-  VECTOR_BEZERO(vector_get_buffer(p), vector_get_length(p), start, len);
+  VECTOR_BEZERO(vector_get_buffer(p), vector_get_dimension(p), start, len);
 }
 
 void ivector_bezero(vector_t *p, int start, int len)
 {
-  VECTOR_BEZERO(ivector_get_buffer(p), vector_get_length(p), start, len);
+  VECTOR_BEZERO(ivector_get_buffer(p), vector_get_dimension(p), start, len);
 }
 
 void cvector_bezero(vector_t *p, int start, int len)
 {
   assert(p);
-  assert((start >= 0) && (start < vector_get_length(p)));
+  assert((start >= 0) && (start < vector_get_dimension(p)));
   assert(len > 0);
 
   vector_bezero(p, start, len);
@@ -201,31 +233,31 @@ void cvector_bezero(vector_t *p, int start, int len)
 
 void vector_fill(vector_t *p, int start, int len, real_t v)
 {
-  VECTOR_FILL(vector_get_buffer(p), vector_get_length(p), start, len, v);
+  VECTOR_FILL(vector_get_buffer(p), vector_get_dimension(p), start, len, v);
 }
 
 void ivector_fill(vector_t *p, int start, int len, real_t v)
 {
-  VECTOR_FILL(ivector_get_buffer(p), vector_get_length(p), start, len, v);
+  VECTOR_FILL(ivector_get_buffer(p), vector_get_dimension(p), start, len, v);
 }
 
 void cvector_fill(vector_t *p, int start, int len, complex_t v)
 {
   assert(p);
-  assert((start >= 0) && (start < vector_get_length(p)));
+  assert((start >= 0) && (start < vector_get_dimension(p)));
   assert(len > 0);
 
   vector_fill(p, start, len, v.real);
   if (abs(v.imag) >= REAL_EPSILON) {
     if (ivector_get_buffer(p) == NULL) {
-      p->imaginary = (real_t *)malloc(vector_get_length(p) * sizeof(real_t));
+      p->imaginary = (real_t *)malloc(vector_get_dimension(p) * sizeof(real_t));
       assert(p->imaginary);
-      memset(ivector_get_buffer(p), 0, vector_get_length(p) * sizeof(real_t));
+      memset(ivector_get_buffer(p), 0, vector_get_dimension(p) * sizeof(real_t));
     }
     ivector_fill(p, start, len, v.imag);
   } else {
     if (ivector_get_buffer(p) != NULL)
-      ivector_bezero(p, 0, vector_get_length(p));
+      ivector_bezero(p, 0, vector_get_dimension(p));
   }
 }
 
@@ -237,12 +269,12 @@ void cvector_fill(vector_t *p, int start, int len, complex_t v)
 
 void vector_randomly_fill(vector_t *p)
 {
-  VECTOR_RANDOMLY_FILL(vector_get_buffer(p), vector_get_length(p));
+  VECTOR_RANDOMLY_FILL(vector_get_buffer(p), vector_get_dimension(p));
 }
 
 void ivector_randomly_fill(vector_t *p)
 {
-  VECTOR_RANDOMLY_FILL(ivector_get_buffer(p), vector_get_length(p));
+  VECTOR_RANDOMLY_FILL(ivector_get_buffer(p), vector_get_dimension(p));
 }
 
 void cvector_randomly_fill(vector_t *p)
@@ -268,26 +300,26 @@ void cvector_randomly_fill(vector_t *p)
 
 void vector_copy_vector(vector_t *q, int qi, vector_t *p, int pi, int n)
 {
-  VECTOR_COPY(vector_get_buffer(q), vector_get_length(q), qi,
-	      vector_get_buffer(p), vector_get_length(p), pi, n);
+  VECTOR_COPY(vector_get_buffer(q), vector_get_dimension(q), qi,
+	      vector_get_buffer(p), vector_get_dimension(p), pi, n);
 }
 
 void vector_copy_ivector(vector_t *q, int qi, vector_t *p, int pi, int n)
 {
-  VECTOR_COPY(vector_get_buffer(q), vector_get_length(q), qi,
-	      ivector_get_buffer(p), vector_get_length(p), pi, n);
+  VECTOR_COPY(vector_get_buffer(q), vector_get_dimension(q), qi,
+	      ivector_get_buffer(p), vector_get_dimension(p), pi, n);
 }
 
 void ivector_copy_vector(vector_t *q, int qi, vector_t *p, int pi, int n)
 {
-  VECTOR_COPY(ivector_get_buffer(q), vector_get_length(q), qi,
-	      vector_get_buffer(p), vector_get_length(p), pi, n);
+  VECTOR_COPY(ivector_get_buffer(q), vector_get_dimension(q), qi,
+	      vector_get_buffer(p), vector_get_dimension(p), pi, n);
 }
 
 void ivector_copy_ivector(vector_t *q, int qi, vector_t *p, int pi, int n)
 {
-  VECTOR_COPY(ivector_get_buffer(q), vector_get_length(q), qi,
-	      ivector_get_buffer(p), vector_get_length(p), pi, n);
+  VECTOR_COPY(ivector_get_buffer(q), vector_get_dimension(q), qi,
+	      ivector_get_buffer(p), vector_get_dimension(p), pi, n);
 }
 
 void cvector_copy_cvector(vector_t *q, int qi, vector_t *p, int pi, int n)
@@ -296,9 +328,9 @@ void cvector_copy_cvector(vector_t *q, int qi, vector_t *p, int pi, int n)
 
   if (ivector_get_buffer(p) != NULL) {
     if (ivector_get_buffer(q) == NULL) {
-      q->imaginary = (real_t *)malloc(vector_get_length(q) * sizeof(real_t));
+      q->imaginary = (real_t *)malloc(vector_get_dimension(q) * sizeof(real_t));
       assert(q->imaginary);
-      memset(ivector_get_buffer(q), 0, vector_get_length(q) * sizeof(real_t));
+      memset(ivector_get_buffer(q), 0, vector_get_dimension(q) * sizeof(real_t));
     }
     ivector_copy_ivector(q, qi, p, pi, n);
   } else {
@@ -318,99 +350,99 @@ void cvector_copy_cvector(vector_t *q, int qi, vector_t *p, int pi, int n)
 
 vector_t *vector_copy_vector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *vector_copy_ivector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *ivector_copy_vector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *ivector_copy_ivector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *vector_add_vector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *vector_add_ivector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *ivector_add_vector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *ivector_add_ivector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *vector_subtract_vector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *vector_subtract_ivector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *ivector_subtract_vector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *ivector_subtract_ivector_add_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), +, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +, v);
   return c;
 }
 
 vector_t *vector_add_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), +, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), +, v);
   return c;
 }
 
 vector_t *ivector_add_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), +, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), +, v);
   return c;
 }
 
@@ -424,9 +456,9 @@ vector_t *cvector_add_scalar(vector_t *c, complex_t v)
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
     ivector_add_scalar(c, v.imag);
@@ -438,25 +470,25 @@ vector_t *cvector_copy_cvector_add_scalar(vector_t *c, vector_t *a, complex_t v)
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   vector_copy_vector_add_scalar(c, a, v.real);
   if ((ivector_get_buffer(a) != NULL) || !(abs(v.imag) < REAL_EPSILON)) {
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      //memset(ivector_get_buffer(c), 0, vector_get_length(c)*sizeof(real_t));
+      //memset(ivector_get_buffer(c), 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    ivector_bezero(c, 0, vector_get_length(c));
+    ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL)
-      ivector_copy_ivector(c, 0, a, 0, vector_get_length(a));
+      ivector_copy_ivector(c, 0, a, 0, vector_get_dimension(a));
     if (!(abs(v.imag) < REAL_EPSILON)) ivector_add_scalar(c, v.imag);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
   return c;
 }
@@ -465,7 +497,7 @@ vector_t *cvector_add_cvector_add_scalar(vector_t *c, vector_t *a, complex_t v)
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   vector_add_vector_add_scalar(c, a, v.real);
 
@@ -473,12 +505,12 @@ vector_t *cvector_add_cvector_add_scalar(vector_t *c, vector_t *a, complex_t v)
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (vector_get_buffer(a) != NULL) ivector_add_ivector(c, a);
     if (!(abs(v.imag) < REAL_EPSILON)) ivector_add_scalar(c, v.imag);
   }
@@ -489,7 +521,7 @@ vector_t *cvector_subtract_cvector_add_scalar(vector_t *c, vector_t *a, complex_
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   vector_subtract_vector_add_scalar(c, a, v.real);
  
@@ -497,12 +529,12 @@ vector_t *cvector_subtract_cvector_add_scalar(vector_t *c, vector_t *a, complex_
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_subtract_ivector(c, a);
     if (!(abs(v.imag) < REAL_EPSILON)) ivector_subtract_scalar(c, v.imag);
   }
@@ -511,99 +543,99 @@ vector_t *cvector_subtract_cvector_add_scalar(vector_t *c, vector_t *a, complex_
 
 vector_t *vector_copy_vector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *vector_copy_ivector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *ivector_copy_vector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *ivector_copy_ivector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *vector_add_vector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *vector_add_ivector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *ivector_add_vector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *ivector_add_ivector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *vector_subtract_vector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *vector_subtract_ivector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *ivector_subtract_vector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *ivector_subtract_ivector_subtract_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), -, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -, v);
   return c;
 }
 
 vector_t *vector_subtract_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), -, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), -, v);
   return c;
 }
 
 vector_t *ivector_subtract_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), -, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), -, v);
   return c;
 }
 
@@ -617,9 +649,9 @@ vector_t *cvector_subtract_scalar(vector_t *c, complex_t v)
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
     ivector_subtract_scalar(c, v.imag);
@@ -631,7 +663,7 @@ vector_t *cvector_copy_cvector_subtract_scalar(vector_t *c, vector_t *a, complex
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   vector_copy_vector_subtract_scalar(c, a, v.real);
 
@@ -639,17 +671,17 @@ vector_t *cvector_copy_cvector_subtract_scalar(vector_t *c, vector_t *a, complex
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      //memset(ivector_get_buffer(c), 0, vector_get_length(c)*sizeof(real_t));
+      //memset(ivector_get_buffer(c), 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    ivector_bezero(c, 0, vector_get_length(c));
+    ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector(c, a);
     if (!(abs(v.imag) < REAL_EPSILON)) ivector_subtract_scalar(c, v.imag);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
   return c;
 }
@@ -658,7 +690,7 @@ vector_t *cvector_add_cvector_subtract_scalar(vector_t *c, vector_t *a, complex_
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   vector_add_vector_subtract_scalar(c, a, v.real);
 
@@ -666,12 +698,12 @@ vector_t *cvector_add_cvector_subtract_scalar(vector_t *c, vector_t *a, complex_
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector(c, a);
     if (!(abs(v.imag) < REAL_EPSILON)) ivector_subtract_scalar(c, v.imag);
   }
@@ -682,7 +714,7 @@ vector_t *cvector_subtract_cvector_subtract_scalar(vector_t *c, vector_t *a, com
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   vector_subtract_vector_subtract_scalar(c, a, v.real);
 
@@ -690,12 +722,12 @@ vector_t *cvector_subtract_cvector_subtract_scalar(vector_t *c, vector_t *a, com
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_subtract_ivector(c, a);
     if (!(abs(v.imag) < REAL_EPSILON)) ivector_add_scalar(c, v.imag);
   }
@@ -704,99 +736,99 @@ vector_t *cvector_subtract_cvector_subtract_scalar(vector_t *c, vector_t *a, com
 
 vector_t *vector_copy_vector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *vector_copy_ivector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *ivector_copy_vector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *ivector_copy_ivector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *vector_add_vector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *vector_add_ivector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *ivector_add_vector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *ivector_add_ivector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *vector_subtract_vector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *vector_subtract_ivector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *ivector_subtract_vector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *ivector_subtract_ivector_multiply_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), *, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *, v);
   return c;
 }
 
 vector_t *vector_multiply_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), *, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), *, v);
   return c;
 }
 
 vector_t *ivector_multiply_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), *, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), *, v);
   return c;
 }
 
@@ -817,7 +849,7 @@ vector_t *cvector_copy_cvector_multiply_scalar(vector_t *c, vector_t *a, complex
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   //(a.real * v.real - a.imag * v.imag) + J*(a.real * v.imag + a.imag * v.real)
   vector_copy_vector_multiply_scalar(c, a, v.real);
@@ -828,19 +860,19 @@ vector_t *cvector_copy_cvector_multiply_scalar(vector_t *c, vector_t *a, complex
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      //memset(ivector_get_buffer(c), 0, vector_get_length(c)*sizeof(real_t));
+      //memset(ivector_get_buffer(c), 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    ivector_bezero(c, 0, vector_get_length(c));
+    ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL)
       ivector_add_ivector_multiply_scalar(c, a, v.real);
     if (!(abs(v.imag) < REAL_EPSILON))
       ivector_add_vector_multiply_scalar(c, a, v.imag);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
 
   return c;
@@ -850,7 +882,7 @@ vector_t *cvector_add_cvector_multiply_scalar(vector_t *c, vector_t *a, complex_
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   //(a.real * v.real - a.imag * v.imag) + J*(a.real * v.imag + a.imag * v.real)
   vector_add_vector_multiply_scalar(c, a, v.real);
@@ -861,12 +893,12 @@ vector_t *cvector_add_cvector_multiply_scalar(vector_t *c, vector_t *a, complex_
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL)
       ivector_add_ivector_multiply_scalar(c, a, v.real);
     if (!(abs(v.imag) < REAL_EPSILON))
@@ -880,7 +912,7 @@ vector_t *cvector_subtract_cvector_multiply_scalar(vector_t *c, vector_t *a, com
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   //(a.real * v.real - a.imag * v.imag) + J*(a.real * v.imag + a.imag * v.real)
   vector_subtract_vector_multiply_scalar(c, a, v.real);
@@ -891,12 +923,12 @@ vector_t *cvector_subtract_cvector_multiply_scalar(vector_t *c, vector_t *a, com
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL)
       ivector_subtract_ivector_multiply_scalar(c, a, v.real);
     if (!(abs(v.imag) < REAL_EPSILON))
@@ -908,99 +940,99 @@ vector_t *cvector_subtract_cvector_multiply_scalar(vector_t *c, vector_t *a, com
 
 vector_t *vector_copy_vector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *vector_copy_ivector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *ivector_copy_vector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *ivector_copy_ivector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *vector_add_vector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *vector_add_ivector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *ivector_add_vector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *ivector_add_ivector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *vector_subtract_vector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *vector_subtract_ivector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *ivector_subtract_vector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *ivector_subtract_ivector_divide_scalar(vector_t *c, vector_t *a, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), /, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), /, v);
   return c;
 }
 
 vector_t *vector_divide_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), /, v);
+  VECTOR_OPCODE_SCALAR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), /, v);
   return c;
 }
 
 vector_t *ivector_divide_scalar(vector_t *c, real_t v)
 {
-  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), /, v);
+  VECTOR_OPCODE_SCALAR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), /, v);
   return c;
 }
 
@@ -1030,9 +1062,9 @@ vector_t *cvector_divide_scalar(vector_t *c, complex_t v)
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
     if (ivector_get_buffer(a) != NULL)
@@ -1042,7 +1074,7 @@ vector_t *cvector_divide_scalar(vector_t *c, complex_t v)
     ivector_divide_scalar(c, denom);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
   vector_destroy(a);
   return c;
@@ -1054,7 +1086,7 @@ vector_t *cvector_copy_cvector_divide_scalar(vector_t *c, vector_t *a, complex_t
 
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   /*
     (c.real + i * c.imag) / (v.real + i * v.imag)
@@ -1074,12 +1106,12 @@ vector_t *cvector_copy_cvector_divide_scalar(vector_t *c, vector_t *a, complex_t
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      //memset(ivector_get_buffer(c), 0, vector_get_length(c)*sizeof(real_t));
+      //memset(ivector_get_buffer(c), 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    ivector_bezero(c, 0, vector_get_length(c));
+    ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL)
       ivector_add_ivector_multiply_scalar(c, a, v.real);
     if (!(abs(v.imag) < REAL_EPSILON))
@@ -1087,7 +1119,7 @@ vector_t *cvector_copy_cvector_divide_scalar(vector_t *c, vector_t *a, complex_t
     ivector_divide_scalar(c, denom);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
   return c;
 }
@@ -1098,7 +1130,7 @@ vector_t *cvector_add_cvector_divide_scalar(vector_t *c, vector_t *a, complex_t 
 
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   tmp = vector_new_and_copy(a);
   cvector_copy_cvector_divide_scalar(tmp, a, v);
@@ -1113,7 +1145,7 @@ vector_t *cvector_subtract_cvector_divide_scalar(vector_t *c, vector_t *a, compl
 
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   tmp = vector_new_and_copy(a);
   cvector_copy_cvector_divide_scalar(tmp, a, v);
@@ -1135,209 +1167,209 @@ vector_t *cvector_subtract_cvector_divide_scalar(vector_t *c, vector_t *a, compl
 
 vector_t *vector_copy_vector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_vector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_vector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_vector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_ivector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_ivector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_vector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_vector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_ivector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_ivector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_vector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_vector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_add_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_add_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), +,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), +,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_vector(vector_t *c, vector_t *a)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), +,
-		       vector_get_buffer(a), vector_get_length(a));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), +,
+		       vector_get_buffer(a), vector_get_dimension(a));
   return c;
 }
 
 vector_t *ivector_add_ivector(vector_t *c, vector_t *a)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), +,
-		       ivector_get_buffer(a), vector_get_length(a));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), +,
+		       ivector_get_buffer(a), vector_get_dimension(a));
   return c;
 }
 
@@ -1345,7 +1377,7 @@ vector_t *cvector_add_cvector(vector_t *c, vector_t *a)
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   // for real part
   vector_add_vector(c, a);
@@ -1355,9 +1387,9 @@ vector_t *cvector_add_cvector(vector_t *c, vector_t *a)
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
     ivector_add_ivector(c, a);
@@ -1370,8 +1402,8 @@ vector_t *cvector_copy_cvector_add_cvector(vector_t *c, vector_t *a, vector_t *b
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // for real part
   vector_copy_vector_add_vector(c, a, b);
@@ -1381,17 +1413,17 @@ vector_t *cvector_copy_cvector_add_cvector(vector_t *c, vector_t *a, vector_t *b
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      //memset(ivector_get_buffer(c), 0, vector_get_length(c)*sizeof(real_t));
+      //memset(ivector_get_buffer(c), 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    ivector_bezero(c, 0, vector_get_length(c));
+    ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector(c, a);
     if (ivector_get_buffer(b) != NULL) ivector_add_ivector(c, b);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
   return c;
 }
@@ -1401,8 +1433,8 @@ vector_t *cvector_add_cvector_add_cvector(vector_t *c, vector_t *a, vector_t *b)
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // for real part
   vector_add_vector_add_vector(c, a, b);
@@ -1412,12 +1444,12 @@ vector_t *cvector_add_cvector_add_cvector(vector_t *c, vector_t *a, vector_t *b)
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector(c, a);
     if (ivector_get_buffer(b) != NULL) ivector_add_ivector(c, b);
   }
@@ -1429,8 +1461,8 @@ vector_t *cvector_subtract_cvector_add_cvector(vector_t *c, vector_t *a, vector_
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // for real part
   vector_subtract_vector_add_vector(c, a, b);
@@ -1440,12 +1472,12 @@ vector_t *cvector_subtract_cvector_add_cvector(vector_t *c, vector_t *a, vector_
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_subtract_ivector(c, a);
     if (ivector_get_buffer(b) != NULL) ivector_subtract_ivector(c, b);
   }
@@ -1455,209 +1487,209 @@ vector_t *cvector_subtract_cvector_add_cvector(vector_t *c, vector_t *a, vector_
 // subtraction
 vector_t *vector_copy_vector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_vector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_vector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_vector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_ivector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_ivector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_vector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_vector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b)); 
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b)); 
   return c;
 }
 
 vector_t *ivector_add_ivector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_ivector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_vector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_vector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_subtract_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_subtract_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), -,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), -,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_vector(vector_t *c, vector_t *a)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), -,
-		       vector_get_buffer(a), vector_get_length(a));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), -,
+		       vector_get_buffer(a), vector_get_dimension(a));
   return c;
 }
 
 vector_t *ivector_subtract_ivector(vector_t *c, vector_t *a)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), -,
-		       ivector_get_buffer(a), vector_get_length(a));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), -,
+		       ivector_get_buffer(a), vector_get_dimension(a));
   return c;
 }
 
@@ -1665,7 +1697,7 @@ vector_t *cvector_subtract_cvector(vector_t *c, vector_t *a)
 {
   assert(c);
   assert(a);
-  assert(vector_get_length(c) == vector_get_length(a));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
 
   // for real part
   vector_subtract_vector(c, a);
@@ -1675,9 +1707,9 @@ vector_t *cvector_subtract_cvector(vector_t *c, vector_t *a)
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
     ivector_subtract_ivector(c, a);
@@ -1690,8 +1722,8 @@ vector_t *cvector_copy_cvector_subtract_cvector(vector_t *c, vector_t *a, vector
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // for real part
   vector_copy_vector_subtract_vector(c, a, b);
@@ -1701,17 +1733,17 @@ vector_t *cvector_copy_cvector_subtract_cvector(vector_t *c, vector_t *a, vector
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      //memset(ivector_get_buffer(c), 0, vector_get_length(c)*sizeof(real_t));
+      //memset(ivector_get_buffer(c), 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    ivector_bezero(c, 0, vector_get_length(c));
+    ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector(c, a);
     if (ivector_get_buffer(b) != NULL) ivector_subtract_ivector(c, b);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }	
   return c;
 }
@@ -1721,8 +1753,8 @@ vector_t *cvector_add_cvector_subtract_cvector(vector_t *c, vector_t *a, vector_
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // for real part
   vector_add_vector_subtract_vector(c, a, b);
@@ -1732,12 +1764,12 @@ vector_t *cvector_add_cvector_subtract_cvector(vector_t *c, vector_t *a, vector_
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector(c, a);
     if (ivector_get_buffer(b) != NULL) ivector_subtract_ivector(c, b);
   }
@@ -1749,8 +1781,8 @@ vector_t *cvector_subtract_cvector_subtract_cvector(vector_t *c, vector_t *a, ve
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // for real part
   vector_subtract_vector_subtract_vector(c, a, b);
@@ -1760,12 +1792,12 @@ vector_t *cvector_subtract_cvector_subtract_cvector(vector_t *c, vector_t *a, ve
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary != NULL);
-      memset(c->imaginary, 0, vector_get_length(c)*sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_subtract_ivector(c, a);
     if (ivector_get_buffer(b) != NULL) ivector_add_ivector(c, b);
   }
@@ -1775,193 +1807,193 @@ vector_t *cvector_subtract_cvector_subtract_cvector(vector_t *c, vector_t *a, ve
 // multiplication
 vector_t *vector_copy_vector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_vector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_copy_ivector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_vector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_copy_ivector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_vector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_vector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_ivector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_add_ivector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_vector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_vector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_ivector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_add_ivector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), +=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), +=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_vector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_vector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_subtract_ivector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_vector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       vector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       vector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_multiply_vector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_subtract_ivector_multiply_ivector(vector_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), -=,
-		       ivector_get_buffer(a), vector_get_length(a), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), -=,
+		       ivector_get_buffer(a), vector_get_dimension(a), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -1970,8 +2002,8 @@ vector_t *cvector_copy_cvector_multiply_cvector(vector_t *c, vector_t *a, vector
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // real part
   vector_copy_vector_multiply_vector(c, a, b);
@@ -1983,17 +2015,17 @@ vector_t *cvector_copy_cvector_multiply_cvector(vector_t *c, vector_t *a, vector
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary);
-      //memset(ivector_get_buffer(c), 0, vector_get_length(c)*sizeof(real_t));
+      //memset(ivector_get_buffer(c), 0, vector_get_dimension(c)*sizeof(real_t));
       */
     }
-    ivector_bezero(c, 0, vector_get_length(c));
+    ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector_multiply_vector(c, a, b);
     if (ivector_get_buffer(b) != NULL) ivector_add_vector_multiply_ivector(c, a, b);
   } else {
     if (ivector_get_buffer(c) != NULL)
-      ivector_bezero(c, 0, vector_get_length(c));
+      ivector_bezero(c, 0, vector_get_dimension(c));
   }
   return c;
 }
@@ -2003,8 +2035,8 @@ vector_t *cvector_add_cvector_multiply_cvector(vector_t *c, vector_t *a, vector_
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // real part
   vector_add_vector_multiply_vector(c, a, b);
@@ -2016,12 +2048,12 @@ vector_t *cvector_add_cvector_multiply_cvector(vector_t *c, vector_t *a, vector_
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary != NULL);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_add_ivector_multiply_vector(c, a, b);
     if (ivector_get_buffer(b) != NULL) ivector_add_vector_multiply_ivector(c, a, b);
   }
@@ -2033,8 +2065,8 @@ vector_t *cvector_subtract_cvector_multiply_cvector(vector_t *c, vector_t *a, ve
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(a));
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(a));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // real part
   vector_subtract_vector_multiply_vector(c, a, b);
@@ -2046,12 +2078,12 @@ vector_t *cvector_subtract_cvector_multiply_cvector(vector_t *c, vector_t *a, ve
     if (ivector_get_buffer(c) == NULL) {
       vector_attach_imaginary(c);
       /*
-      c->imaginary = (real_t *)malloc(vector_get_length(c) * sizeof(real_t));
+      c->imaginary = (real_t *)malloc(vector_get_dimension(c) * sizeof(real_t));
       assert(c->imaginary != NULL);
-      memset(c->imaginary, 0, vector_get_length(c) * sizeof(real_t));
+      memset(c->imaginary, 0, vector_get_dimension(c) * sizeof(real_t));
       */
     }
-    //ivector_bezero(c, 0, vector_get_length(c));
+    //ivector_bezero(c, 0, vector_get_dimension(c));
     if (ivector_get_buffer(a) != NULL) ivector_subtract_ivector_multiply_vector(c, a, b);
     if (ivector_get_buffer(b) != NULL) ivector_subtract_vector_multiply_ivector(c, a, b);
   }
@@ -2060,33 +2092,33 @@ vector_t *cvector_subtract_cvector_multiply_cvector(vector_t *c, vector_t *a, ve
 
 vector_t *vector_multiply_vector(vector_t *c, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *vector_multiply_ivector(vector_t *c, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_length(c), =,
-		       vector_get_buffer(c), vector_get_length(c), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(vector_get_buffer(c), vector_get_dimension(c), =,
+		       vector_get_buffer(c), vector_get_dimension(c), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_multiply_vector(vector_t *c, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), *,
-		       vector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), *,
+		       vector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
 vector_t *ivector_multiply_ivector(vector_t *c, vector_t *b)
 {
-  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_length(c), =,
-		       ivector_get_buffer(c), vector_get_length(c), *,
-		       ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_OPCODE_VECTOR(ivector_get_buffer(c), vector_get_dimension(c), =,
+		       ivector_get_buffer(c), vector_get_dimension(c), *,
+		       ivector_get_buffer(b), vector_get_dimension(b));
   return c;
 }
 
@@ -2096,7 +2128,7 @@ vector_t *cvector_multiply_cvector(vector_t *c, vector_t *b)
 
   assert(c);
   assert(b);
-  assert(vector_get_length(c) == vector_get_length(b));
+  assert(vector_get_dimension(c) == vector_get_dimension(b));
 
   tmp = vector_new_and_copy(c);
   cvector_copy_cvector_multiply_cvector(c, tmp, b);
@@ -2117,29 +2149,29 @@ vector_t *cvector_multiply_cvector(vector_t *c, vector_t *b)
 
 real_t vector_dotproduct_vector(real_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_DOTPRODUCT_VECTOR(c, vector_get_buffer(a), vector_get_length(a),
-			   vector_get_buffer(b), vector_get_length(b));
+  VECTOR_DOTPRODUCT_VECTOR(c, vector_get_buffer(a), vector_get_dimension(a),
+			   vector_get_buffer(b), vector_get_dimension(b));
   return *c;
 }
 
 real_t vector_dotproduct_ivector(real_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_DOTPRODUCT_VECTOR(c, vector_get_buffer(a), vector_get_length(a),
-			   ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_DOTPRODUCT_VECTOR(c, vector_get_buffer(a), vector_get_dimension(a),
+			   ivector_get_buffer(b), vector_get_dimension(b));
   return *c;
 }
 
 real_t ivector_dotproduct_vector(real_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_DOTPRODUCT_VECTOR(c, ivector_get_buffer(a), vector_get_length(a),
-			   vector_get_buffer(b), vector_get_length(b));
+  VECTOR_DOTPRODUCT_VECTOR(c, ivector_get_buffer(a), vector_get_dimension(a),
+			   vector_get_buffer(b), vector_get_dimension(b));
   return *c;
 }
 
 real_t ivector_dotproduct_ivector(real_t *c, vector_t *a, vector_t *b)
 {
-  VECTOR_DOTPRODUCT_VECTOR(c, ivector_get_buffer(a), vector_get_length(a),
-			   ivector_get_buffer(b), vector_get_length(b));
+  VECTOR_DOTPRODUCT_VECTOR(c, ivector_get_buffer(a), vector_get_dimension(a),
+			   ivector_get_buffer(b), vector_get_dimension(b));
   return *c;
 }
 
@@ -2150,7 +2182,7 @@ complex_t cvector_dotproduct_cvector(complex_t *c, vector_t *a, vector_t *b)
   assert(c);
   assert(a);
   assert(b);
-  assert(vector_get_length(a) == vector_get_length(b));
+  assert(vector_get_dimension(a) == vector_get_dimension(b));
 
   // for real part
   vector_dotproduct_vector(&c->real, a, b);
@@ -2186,14 +2218,14 @@ complex_t cvector_dotproduct_cvector(complex_t *c, vector_t *a, vector_t *b)
 real_t vector_get_sum(vector_t *p)
 {
   real_t v;
-  VECTOR_SUM(v, vector_get_buffer(p), vector_get_length(p));
+  VECTOR_SUM(v, vector_get_buffer(p), vector_get_dimension(p));
   return v;
 }
 
 real_t ivector_get_sum(vector_t *p)
 {
   real_t v;
-  VECTOR_SUM(v, ivector_get_buffer(p), vector_get_length(p));
+  VECTOR_SUM(v, ivector_get_buffer(p), vector_get_dimension(p));
   return v;
 }
 
@@ -2215,7 +2247,7 @@ real_t vector_get_norm(vector_t *p)
   real_t v;
   assert(p);
   vector_dotproduct_vector(&v, p, p);
-  return v;
+  return sqrt(v);
 }
 
 real_t ivector_get_norm(vector_t *p)
@@ -2223,13 +2255,15 @@ real_t ivector_get_norm(vector_t *p)
   real_t v;
   assert(p);
   ivector_dotproduct_ivector(&v, p, p);
-  return v;
+  return sqrt(v);
 }
 
 complex_t cvector_get_norm(vector_t *p)
 {
-  complex_t v;
+  complex_t v, w;
+  
   assert(p);
   cvector_dotproduct_cvector(&v, p, p);
-  return v;
+  complex_copy_complex_sqrt(&w, &v);
+  return w;
 }

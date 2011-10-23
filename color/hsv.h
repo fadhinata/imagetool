@@ -17,8 +17,8 @@
 #ifndef __HSV_H__
 #define __HSV_H__
 
-#include <bytemap.h>
-#include <floatmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/floatmap.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -20,8 +20,8 @@
 #include <assert.h>
 
 #include <common.h>
-#include <dwordmap.h>
-#include <bitmap.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/bitmap.h>
 
 dwordmap_t *dwordmap_new(int w, int h)
 {
@@ -110,7 +110,7 @@ void dwordmap_add(dwordmap_t *c, dwordmap_t *a, int b)
   for (i = 0; i < h; i++) {
     for (j = 0; j < w; j++) {
       v = *(abuf + j) + b;
-      *(cbuf + j) = (v < 0 ? 0 : (v > UINT16_MAX ? UINT16_MAX : v));
+      *(cbuf + j) = (v < 0 ? 0 : (v > UINT32_MAX ? UINT32_MAX : v));
     }
     cbuf += cpitch;
     abuf += apitch;

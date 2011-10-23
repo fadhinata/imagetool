@@ -21,8 +21,8 @@
 #include <assert.h>
 
 #include <common.h>
-#include <point.h>
-#include <triangle.h>
+#include <geometry/point.h>
+#include <geometry/triangle.h>
 
 triangle_t *triangle_new(void)
 {

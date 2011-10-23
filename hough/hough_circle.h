@@ -17,10 +17,10 @@
 #ifndef __HOUGH_CIRCLE_H__
 #define __HOUGH_CIRCLE_H__
 
-#include <bitmap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -17,10 +17,10 @@
 #ifndef __THRESHOLD_H__
 #define __THRESHOLD_H__
 
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {

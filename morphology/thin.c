@@ -19,14 +19,14 @@
 #include <string.h>
 #include <math.h>
 #include <malloc.h>
-
-#include <thin.h>
-#include <bitmap.h>
-#include <bytemap.h>
 #include <assert.h>
-#include <convert.h>
-#include <point_list.h>
-#include <dlink.h>
+
+#include <morphology/thin.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <convert/convert.h>
+#include <geometry/point_list.h>
+#include <buffering/dlink.h>
 
 /* For 8 neighborhood system of (x, y) the index of each neighbor is like this:
  *   4 3 2
@@ -45,34 +45,34 @@ static inline void read_3x3_from_bitmap(int value[9], int x, int y, bitmap_t *p)
 {
   memset(value, 0, 9 * sizeof(int));
 
-  value[4] = bitmap_get_value(x-1, y-1, p);
-  value[3] = bitmap_get_value(x,   y-1, p);
-  value[2] = bitmap_get_value(x+1, y-1, p);
+  value[4] = bitmap_get_value(p, x-1, y-1);
+  value[3] = bitmap_get_value(p, x,   y-1);
+  value[2] = bitmap_get_value(p, x+1, y-1);
 
-  value[5] = bitmap_get_value(x-1, y, p);
-  value[0] = bitmap_get_value(x,   y, p);
-  value[1] = bitmap_get_value(x+1, y, p);
+  value[5] = bitmap_get_value(p, x-1, y);
+  value[0] = bitmap_get_value(p, x,   y);
+  value[1] = bitmap_get_value(p, x+1, y);
 
-  value[6] = bitmap_get_value(x-1, y+1, p);
-  value[7] = bitmap_get_value(x, y+1, p);
-  value[8] = bitmap_get_value(x+1, y+1, p);
+  value[6] = bitmap_get_value(p, x-1, y+1);
+  value[7] = bitmap_get_value(p, x, y+1);
+  value[8] = bitmap_get_value(p, x+1, y+1);
 }
 
 static inline void read_3x3_from_bytemap(int value[9], int x, int y, bytemap_t *p)
 {
   memset(value, 0, 9 * sizeof(int));
 
-  value[4] = bytemap_get_value(x-1, y-1, p);
-  value[3] = bytemap_get_value(x,   y-1, p);
-  value[2] = bytemap_get_value(x+1, y-1, p);
+  value[4] = bytemap_get_value(p, x-1, y-1);
+  value[3] = bytemap_get_value(p, x,   y-1);
+  value[2] = bytemap_get_value(p, x+1, y-1);
 
-  value[5] = bytemap_get_value(x-1, y, p);
-  value[0] = bytemap_get_value(x,   y, p);
-  value[1] = bytemap_get_value(x+1, y, p);
+  value[5] = bytemap_get_value(p, x-1, y);
+  value[0] = bytemap_get_value(p, x,   y);
+  value[1] = bytemap_get_value(p, x+1, y);
 
-  value[6] = bytemap_get_value(x-1, y+1, p);
-  value[7] = bytemap_get_value(x, y+1, p);
-  value[8] = bytemap_get_value(x+1, y+1, p);
+  value[6] = bytemap_get_value(p, x-1, y+1);
+  value[7] = bytemap_get_value(p, x,   y+1);
+  value[8] = bytemap_get_value(p, x+1, y+1);
 }
 
 static inline void bitmap_read_3x3(int *values, int x, int y, bitmap_t *p)
@@ -81,26 +81,26 @@ static inline void bitmap_read_3x3(int *values, int x, int y, bitmap_t *p)
 
   if (x > 0) {
     if (y > 0) 
-      values[4] = bitmap_get_value(x-1, y-1, p);
-    values[5] = bitmap_get_value(x-1, y, p);
+      values[4] = bitmap_get_value(p, x-1, y-1);
+    values[5] = bitmap_get_value(p, x-1, y);
     if (y < bitmap_get_height(p)-1)
-      values[6] = bitmap_get_value(x-1, y+1, p);
+      values[6] = bitmap_get_value(p, x-1, y+1);
   }
 
   if (1) {
     if (y > 0)
-      values[3] = bitmap_get_value(x, y-1, p);
-    values[0] = bitmap_get_value(x, y, p);
+      values[3] = bitmap_get_value(p, x, y-1);
+    values[0] = bitmap_get_value(p, x, y);
     if (y < bitmap_get_height(p)-1)
-      values[7] = bitmap_get_value(x, y+1, p);
+      values[7] = bitmap_get_value(p, x, y+1);
   }
 
   if (x < bitmap_get_width(p)-1) {
     if (y > 0)
-      values[2] = bitmap_get_value(x+1, y-1, p);
-    values[1] = bitmap_get_value(x+1, y, p);
+      values[2] = bitmap_get_value(p, x+1, y-1);
+    values[1] = bitmap_get_value(p, x+1, y);
     if (y < bitmap_get_height(p)-1)
-      values[8] = bitmap_get_value(x+1, y+1, p);
+      values[8] = bitmap_get_value(p, x+1, y+1);
   }
 }
 
@@ -110,26 +110,26 @@ static inline void bytemap_read_3x3(int *values, int x, int y, bytemap_t *p)
 
   if (x > 0) {
     if (y > 0) 
-      values[4] = bytemap_get_value(x-1, y-1, p);
-    values[5] = bytemap_get_value(x-1, y, p);
+      values[4] = bytemap_get_value(p, x-1, y-1);
+    values[5] = bytemap_get_value(p, x-1, y);
     if (y < bytemap_get_height(p)-1)
-      values[6] = bytemap_get_value(x-1, y+1, p);
+      values[6] = bytemap_get_value(p, x-1, y+1);
   }
 
   if (1) {
     if (y > 0)
-      values[3] = bytemap_get_value(x, y-1, p);
-    values[0] = bytemap_get_value(x, y, p);
+      values[3] = bytemap_get_value(p, x, y-1);
+    values[0] = bytemap_get_value(p, x, y);
     if (y < bytemap_get_height(p)-1)
-      values[7] = bytemap_get_value(x, y+1, p);
+      values[7] = bytemap_get_value(p, x, y+1);
   }
 
   if (x < bytemap_get_width(p)-1) {
     if (y > 0)
-      values[2] = bytemap_get_value(x+1, y-1, p);
-    values[1] = bytemap_get_value(x+1, y, p);
+      values[2] = bytemap_get_value(p, x+1, y-1);
+    values[1] = bytemap_get_value(p, x+1, y);
     if (y < bytemap_get_height(p)-1)
-      values[8] = bytemap_get_value(x+1, y+1, p);
+      values[8] = bytemap_get_value(p, x+1, y+1);
   }
 }
 
@@ -161,79 +161,79 @@ static inline void bottom_shift_3x3(int *value)
 
 static inline void read_lband_3x3_from_bitmap(int value[9], int x, int y, bitmap_t *m)
 {
-  value[4] = bitmap_get_value(x-1, y-1, m);
-  value[5] = bitmap_get_value(x-1, y, m);
-  value[6] = bitmap_get_value(x-1, y+1, m);
+  value[4] = bitmap_get_value(m, x-1, y-1);
+  value[5] = bitmap_get_value(m, x-1, y);
+  value[6] = bitmap_get_value(m, x-1, y+1);
 }
 
 static inline void read_rband_3x3_from_bitmap(int value[9], int x, int y, bitmap_t *m)
 {
-  value[2] = bitmap_get_value(x+1, y-1, m);
-  value[1] = bitmap_get_value(x+1, y, m);
-  value[8] = bitmap_get_value(x+1, y+1, m);
+  value[2] = bitmap_get_value(m, x+1, y-1);
+  value[1] = bitmap_get_value(m, x+1, y);
+  value[8] = bitmap_get_value(m, x+1, y+1);
 }
 
 static inline void read_tband_3x3_from_bitmap(int value[9], int x, int y, bitmap_t *m)
 {
-  value[4] = bitmap_get_value(x-1, y-1, m);
-  value[3] = bitmap_get_value(x, y-1, m);
-  value[2] = bitmap_get_value(x+1, y-1, m);
+  value[4] = bitmap_get_value(m, x-1, y-1);
+  value[3] = bitmap_get_value(m, x, y-1);
+  value[2] = bitmap_get_value(m, x+1, y-1);
 }
 
 static inline void read_bband_3x3_from_bitmap(int value[9], int x, int y, bitmap_t *m)
 {
-  value[6] = bitmap_get_value(x-1, y+1, m);
-  value[7] = bitmap_get_value(x, y+1, m);
-  value[8] = bitmap_get_value(x+1, y+1, m);
+  value[6] = bitmap_get_value(m, x-1, y+1);
+  value[7] = bitmap_get_value(m, x, y+1);
+  value[8] = bitmap_get_value(m, x+1, y+1);
 }
 
 static inline void read_lband_3x3_from_bytemap(int value[9], int x, int y, bytemap_t *m)
 {
-  value[4] = bytemap_get_value(x-1, y-1, m);
-  value[5] = bytemap_get_value(x-1, y, m);
-  value[6] = bytemap_get_value(x-1, y+1, m);
+  value[4] = bytemap_get_value(m, x-1, y-1);
+  value[5] = bytemap_get_value(m, x-1, y);
+  value[6] = bytemap_get_value(m, x-1, y+1);
 }
 
 static inline void read_rband_3x3_from_bytemap(int value[9], int x, int y, bytemap_t *m)
 {
-  value[2] = bytemap_get_value(x+1, y-1, m);
-  value[1] = bytemap_get_value(x+1, y, m);
-  value[8] = bytemap_get_value(x+1, y+1, m);
+  value[2] = bytemap_get_value(m, x+1, y-1);
+  value[1] = bytemap_get_value(m, x+1, y);
+  value[8] = bytemap_get_value(m, x+1, y+1);
 }
 
 static inline void read_tband_3x3_from_bytemap(int value[9], int x, int y, bytemap_t *m)
 {
-  value[4] = bytemap_get_value(x-1, y-1, m);
-  value[3] = bytemap_get_value(x, y-1, m);
-  value[2] = bytemap_get_value(x+1, y-1, m);
+  value[4] = bytemap_get_value(m, x-1, y-1);
+  value[3] = bytemap_get_value(m, x, y-1);
+  value[2] = bytemap_get_value(m, x+1, y-1);
 }
 
 static inline void read_bband_3x3_from_bytemap(int value[9], int x, int y, bytemap_t *m)
 {
-  value[6] = bytemap_get_value(x-1, y+1, m);
-  value[7] = bytemap_get_value(x, y+1, m);
-  value[8] = bytemap_get_value(x+1, y+1, m);
+  value[6] = bytemap_get_value(m, x-1, y+1);
+  value[7] = bytemap_get_value(m, x, y+1);
+  value[8] = bytemap_get_value(m, x+1, y+1);
 }
 
 static inline void bytemap_read_rband_3x3(int *value, int x, int y, bytemap_t *m)
 {
-  value[2] = bytemap_get_value(x+1, y-1, m);
-  value[1] = bytemap_get_value(x+1, y, m);
-  value[8] = bytemap_get_value(x+1, y+1, m);
+  value[2] = bytemap_get_value(m, x+1, y-1);
+  value[1] = bytemap_get_value(m, x+1, y);
+  value[8] = bytemap_get_value(m, x+1, y+1);
 }
 
 static inline void bytemap_read_tband_3x3(int *value, int x, int y, bytemap_t *m)
 {
-  value[4] = bytemap_get_value(x-1, y-1, m);
-  value[3] = bytemap_get_value(x, y-1, m);
-  value[2] = bytemap_get_value(x+1, y-1, m);
+  value[4] = bytemap_get_value(m, x-1, y-1);
+  value[3] = bytemap_get_value(m, x, y-1);
+  value[2] = bytemap_get_value(m, x+1, y-1);
 }
 
 static inline void bytemap_read_bband_3x3(int *value, int x, int y, bytemap_t *m)
 {
-  value[6] = bytemap_get_value(x-1, y+1, m);
-  value[7] = bytemap_get_value(x, y+1, m);
-  value[8] = bytemap_get_value(x+1, y+1, m);
+  value[6] = bytemap_get_value(m, x-1, y+1);
+  value[7] = bytemap_get_value(m, x, y+1);
+  value[8] = bytemap_get_value(m, x+1, y+1);
 }
 
 /* Reading The Value of Pixels in 24-neighbor of 5x5 Window
@@ -249,70 +249,70 @@ static inline void read_5x5_from_bitmap(int value[9], int x, int y, bitmap_t *m)
 {
   memset(value, 0, 25 * sizeof(int));
 
-  value[15] = bitmap_get_value(x-2, y-2, m);
-  value[14] = bitmap_get_value(x-1, y-2, m);
-  value[13] = bitmap_get_value(x,   y-2, m);
-  value[12] = bitmap_get_value(x+1, y-2, m);
-  value[11] = bitmap_get_value(x+2, y-2, m);
+  value[15] = bitmap_get_value(m, x-2, y-2);
+  value[14] = bitmap_get_value(m, x-1, y-2);
+  value[13] = bitmap_get_value(m, x,   y-2);
+  value[12] = bitmap_get_value(m, x+1, y-2);
+  value[11] = bitmap_get_value(m, x+2, y-2);
 
-  value[16] = bitmap_get_value(x-2, y-1, m);
-  value[4]  = bitmap_get_value(x-1, y-1, m);
-  value[3]  = bitmap_get_value(x,   y-1, m);
-  value[2]  = bitmap_get_value(x+1, y-1, m);
-  value[10] = bitmap_get_value(x+2, y-1, m);
+  value[16] = bitmap_get_value(m, x-2, y-1);
+  value[4]  = bitmap_get_value(m, x-1, y-1);
+  value[3]  = bitmap_get_value(m, x,   y-1);
+  value[2]  = bitmap_get_value(m, x+1, y-1);
+  value[10] = bitmap_get_value(m, x+2, y-1);
 
-  value[17] = bitmap_get_value(x-2, y,   m);
-  value[5]  = bitmap_get_value(x-1, y,   m);
-  value[0]  = bitmap_get_value(x,   y,   m);
-  value[1]  = bitmap_get_value(x+1, y,   m);
-  value[9]  = bitmap_get_value(x+2, y,   m);
+  value[17] = bitmap_get_value(m, x-2, y);
+  value[5]  = bitmap_get_value(m, x-1, y);
+  value[0]  = bitmap_get_value(m, x,   y);
+  value[1]  = bitmap_get_value(m, x+1, y);
+  value[9]  = bitmap_get_value(m, x+2, y);
 
-  value[18] = bitmap_get_value(x-2, y+1, m);
-  value[6]  = bitmap_get_value(x-1, y+1, m);
-  value[7]  = bitmap_get_value(x,   y+1, m);
-  value[8]  = bitmap_get_value(x+1, y+1, m);
-  value[24] = bitmap_get_value(x+2, y+1, m);
+  value[18] = bitmap_get_value(m, x-2, y+1);
+  value[6]  = bitmap_get_value(m, x-1, y+1);
+  value[7]  = bitmap_get_value(m, x,   y+1);
+  value[8]  = bitmap_get_value(m, x+1, y+1);
+  value[24] = bitmap_get_value(m, x+2, y+1);
 
-  value[19] = bitmap_get_value(x-2, y+2, m);
-  value[20] = bitmap_get_value(x-1, y+2, m);
-  value[21] = bitmap_get_value(x,   y+2, m);
-  value[22] = bitmap_get_value(x+1, y+2, m);
-  value[23] = bitmap_get_value(x+2, y+2, m);
+  value[19] = bitmap_get_value(m, x-2, y+2);
+  value[20] = bitmap_get_value(m, x-1, y+2);
+  value[21] = bitmap_get_value(m, x,   y+2);
+  value[22] = bitmap_get_value(m, x+1, y+2);
+  value[23] = bitmap_get_value(m, x+2, y+2);
 }
 
 static inline void read_5x5_from_bytemap(int value[9], int x, int y, bytemap_t *m)
 {
   memset(value, 0, 25 * sizeof(int));
 
-  value[15] = bytemap_get_value(x-2, y-2, m);
-  value[14] = bytemap_get_value(x-1, y-2, m);
-  value[13] = bytemap_get_value(x,   y-2, m);
-  value[12] = bytemap_get_value(x+1, y-2, m);
-  value[11] = bytemap_get_value(x+2, y-2, m);
+  value[15] = bytemap_get_value(m, x-2, y-2);
+  value[14] = bytemap_get_value(m, x-1, y-2);
+  value[13] = bytemap_get_value(m, x,   y-2);
+  value[12] = bytemap_get_value(m, x+1, y-2);
+  value[11] = bytemap_get_value(m, x+2, y-2);
 
-  value[16] = bytemap_get_value(x-2, y-1, m);
-  value[4]  = bytemap_get_value(x-1, y-1, m);
-  value[3]  = bytemap_get_value(x,   y-1, m);
-  value[2]  = bytemap_get_value(x+1, y-1, m);
-  value[10] = bytemap_get_value(x+2, y-1, m);
+  value[16] = bytemap_get_value(m, x-2, y-1);
+  value[4]  = bytemap_get_value(m, x-1, y-1);
+  value[3]  = bytemap_get_value(m, x,   y-1);
+  value[2]  = bytemap_get_value(m, x+1, y-1);
+  value[10] = bytemap_get_value(m, x+2, y-1);
 
-  value[17] = bytemap_get_value(x-2, y,   m);
-  value[5]  = bytemap_get_value(x-1, y,   m);
-  value[0]  = bytemap_get_value(x,   y,   m);
-  value[1]  = bytemap_get_value(x+1, y,   m);
-  value[9]  = bytemap_get_value(x+2, y,   m);
+  value[17] = bytemap_get_value(m, x-2, y);
+  value[5]  = bytemap_get_value(m, x-1, y);
+  value[0]  = bytemap_get_value(m, x,   y);
+  value[1]  = bytemap_get_value(m, x+1, y);
+  value[9]  = bytemap_get_value(m, x+2, y);
 
-  value[18] = bytemap_get_value(x-2, y+1, m);
-  value[6]  = bytemap_get_value(x-1, y+1, m);
-  value[7]  = bytemap_get_value(x,   y+1, m);
-  value[8]  = bytemap_get_value(x+1, y+1, m);
-  value[24] = bytemap_get_value(x+2, y+1, m);
+  value[18] = bytemap_get_value(m, x-2, y+1);
+  value[6]  = bytemap_get_value(m, x-1, y+1);
+  value[7]  = bytemap_get_value(m, x,   y+1);
+  value[8]  = bytemap_get_value(m, x+1, y+1);
+  value[24] = bytemap_get_value(m, x+2, y+1);
 
-  value[19] = bytemap_get_value(x-2, y+2, m);
-  value[20] = bytemap_get_value(x-1, y+2, m);
-  value[21] = bytemap_get_value(x,   y+2, m);
-  value[22] = bytemap_get_value(x+1, y+2, m);
-  value[23] = bytemap_get_value(x+2, y+2, m);
+  value[19] = bytemap_get_value(m, x-2, y+2);
+  value[20] = bytemap_get_value(m, x-1, y+2);
+  value[21] = bytemap_get_value(m, x,   y+2);
+  value[22] = bytemap_get_value(m, x+1, y+2);
+  value[23] = bytemap_get_value(m, x+2, y+2);
 }
 
 static inline void bitmap_read_5x5(int *values, int x, int y, bitmap_t *p)
@@ -321,201 +321,201 @@ static inline void bitmap_read_5x5(int *values, int x, int y, bitmap_t *p)
 
   if (x > 1) {
     if (y > 1) {
-      values[15] = bitmap_get_value(x-2, y-2, p);
-      values[14] = bitmap_get_value(x-1, y-2, p);
-      values[16] = bitmap_get_value(x-2, y-1, p);
-      values[4]  = bitmap_get_value(x-1, y-1, p);
+      values[15] = bitmap_get_value(p, x-2, y-2);
+      values[14] = bitmap_get_value(p, x-1, y-2);
+      values[16] = bitmap_get_value(p, x-2, y-1);
+      values[4]  = bitmap_get_value(p, x-1, y-1);
     } else if (y > 0) {
-      values[16] = bitmap_get_value(x-2, y-1, p);
-      values[4]  = bitmap_get_value(x-1, y-1, p);
+      values[16] = bitmap_get_value(p, x-2, y-1);
+      values[4]  = bitmap_get_value(p, x-1, y-1);
     }
     if (1) {
-      values[17] = bitmap_get_value(x-2, y,   p);
-      values[5]  = bitmap_get_value(x-1, y,   p);
+      values[17] = bitmap_get_value(p, x-2, y);
+      values[5]  = bitmap_get_value(p, x-1, y);
     }
     if (y < bitmap_get_height(p)-2) {
-      values[19] = bitmap_get_value(x-2, y+2, p);
-      values[20] = bitmap_get_value(x-1, y+2, p);
-      values[18] = bitmap_get_value(x-2, y+1, p);
-      values[6]  = bitmap_get_value(x-1, y+1, p);
+      values[19] = bitmap_get_value(p, x-2, y+2);
+      values[20] = bitmap_get_value(p, x-1, y+2);
+      values[18] = bitmap_get_value(p, x-2, y+1);
+      values[6]  = bitmap_get_value(p, x-1, y+1);
     } else if (y < bitmap_get_height(p)-1) {
-      values[18] = bitmap_get_value(x-2, y+1, p);
-      values[6]  = bitmap_get_value(x-1, y+1, p);
+      values[18] = bitmap_get_value(p, x-2, y+1);
+      values[6]  = bitmap_get_value(p, x-1, y+1);
     }
   } else if (x > 0) {
     if (y > 1) {
-      values[14] = bitmap_get_value(x-1, y-2, p);
-      values[4]  = bitmap_get_value(x-1, y-1, p);
+      values[14] = bitmap_get_value(p, x-1, y-2);
+      values[4]  = bitmap_get_value(p, x-1, y-1);
     } else if (y > 0) {
-      values[4]  = bitmap_get_value(x-1, y-1, p);
+      values[4]  = bitmap_get_value(p, x-1, y-1);
     }
     if (1) {
-      values[5]  = bitmap_get_value(x-1, y,   p);
+      values[5]  = bitmap_get_value(p, x-1, y);
     }
     if (y < bitmap_get_height(p)-2) {
-      values[20] = bitmap_get_value(x-1, y+2, p);
-      values[6]  = bitmap_get_value(x-1, y+1, p);
+      values[20] = bitmap_get_value(p, x-1, y+2);
+      values[6]  = bitmap_get_value(p, x-1, y+1);
     } else if (y < p->header.height-1) {
-      values[6]  = bitmap_get_value(x-1, y+1, p);
+      values[6]  = bitmap_get_value(p, x-1, y+1);
     }
   }
 
   if (1) {
     if (y > 1) {
-      values[13] = bitmap_get_value(x,   y-2, p);
-      values[3]  = bitmap_get_value(x,   y-1, p);
+      values[13] = bitmap_get_value(p, x,   y-2);
+      values[3]  = bitmap_get_value(p, x,   y-1);
     } else if (y > 0) {
-      values[3]  = bitmap_get_value(x,   y-1, p);
+      values[3]  = bitmap_get_value(p, x,   y-1);
     }
     if (1) {
-      values[0]  = bitmap_get_value(x,   y,   p);
+      values[0]  = bitmap_get_value(p, x,   y);
     }
     if (y < bitmap_get_height(p)-2) {
-      values[21] = bitmap_get_value(x,   y+2, p);
-      values[7]  = bitmap_get_value(x,   y+1, p);
+      values[21] = bitmap_get_value(p, x,   y+2);
+      values[7]  = bitmap_get_value(p, x,   y+1);
     } else if (y < p->header.height-1) {
-      values[7]  = bitmap_get_value(x,   y+1, p);
+      values[7]  = bitmap_get_value(p, x,   y+1);
     }
   }
 	
   if (x < bitmap_get_width(p)-2) {
     if (y > 1) {
-      values[11] = bitmap_get_value(x+2, y-2, p);
-      values[12] = bitmap_get_value(x+1, y-2, p);
-      values[10] = bitmap_get_value(x+2, y-1, p);
-      values[2]  = bitmap_get_value(x+1, y-1, p);
+      values[11] = bitmap_get_value(p, x+2, y-2);
+      values[12] = bitmap_get_value(p, x+1, y-2);
+      values[10] = bitmap_get_value(p, x+2, y-1);
+      values[2]  = bitmap_get_value(p, x+1, y-1);
     } else if (y > 0) {
-      values[10] = bitmap_get_value(x+2, y-1, p);
-      values[2]  = bitmap_get_value(x+1, y-1, p);
+      values[10] = bitmap_get_value(p, x+2, y-1);
+      values[2]  = bitmap_get_value(p, x+1, y-1);
     }
     if (1) {
-      values[9]  = bitmap_get_value(x+2, y,   p);
-      values[1]  = bitmap_get_value(x+1, y,   p);
+      values[9]  = bitmap_get_value(p, x+2, y);
+      values[1]  = bitmap_get_value(p, x+1, y);
     }
     if (y < bitmap_get_height(p)-2) {
-      values[23] = bitmap_get_value(x+2, y+2, p);
-      values[22] = bitmap_get_value(x+1, y+2, p);
-      values[24] = bitmap_get_value(x+2, y+1, p);
-      values[8]  = bitmap_get_value(x+1, y+1, p);
+      values[23] = bitmap_get_value(p, x+2, y+2);
+      values[22] = bitmap_get_value(p, x+1, y+2);
+      values[24] = bitmap_get_value(p, x+2, y+1);
+      values[8]  = bitmap_get_value(p, x+1, y+1);
     } else if (y < p->header.height-1) {
-      values[24] = bitmap_get_value(x+2, y+1, p);
-      values[8]  = bitmap_get_value(x+1, y+1, p);
+      values[24] = bitmap_get_value(p, x+2, y+1);
+      values[8]  = bitmap_get_value(p, x+1, y+1);
     }
   } else if (x < bitmap_get_width(p)-1) {
     if (y > 1) {
-      values[12] = bitmap_get_value(x+1, y-2, p);
-      values[2]  = bitmap_get_value(x+1, y-1, p);
+      values[12] = bitmap_get_value(p, x+1, y-2);
+      values[2]  = bitmap_get_value(p, x+1, y-1);
     } else if (y > 0)
-      values[2]  = bitmap_get_value(x+1, y-1, p);
+      values[2]  = bitmap_get_value(p, x+1, y-1);
     if (1)
-      values[1]  = bitmap_get_value(x+1, y,   p);
+      values[1]  = bitmap_get_value(p, x+1, y);
     if (y < bitmap_get_height(p)-2) {
-      values[22] = bitmap_get_value(x+1, y+2, p);
-      values[8]  = bitmap_get_value(x+1, y+1, p);
+      values[22] = bitmap_get_value(p, x+1, y+2);
+      values[8]  = bitmap_get_value(p, x+1, y+1);
     } else if (y < p->header.height-1)
-      values[8]  = bitmap_get_value(x+1, y+1, p);
+      values[8]  = bitmap_get_value(p, x+1, y+1);
   }
 }
 
 static inline void bytemap_read_5x5(int *values, int x, int y, bytemap_t *p)
 {
-  memset(values, 0, 25 * sizeof(int));
+  memset(values, 0, 25*sizeof(int));
 
   if (x > 1) {
     if (y > 1) {
-      values[15] = bytemap_get_value(x-2, y-2, p);
-      values[14] = bytemap_get_value(x-1, y-2, p);
-      values[16] = bytemap_get_value(x-2, y-1, p);
-      values[4]  = bytemap_get_value(x-1, y-1, p);
+      values[15] = bytemap_get_value(p, x-2, y-2);
+      values[14] = bytemap_get_value(p, x-1, y-2);
+      values[16] = bytemap_get_value(p, x-2, y-1);
+      values[4]  = bytemap_get_value(p, x-1, y-1);
     } else if (y > 0) {
-      values[16] = bytemap_get_value(x-2, y-1, p);
-      values[4]  = bytemap_get_value(x-1, y-1, p);
+      values[16] = bytemap_get_value(p, x-2, y-1);
+      values[4]  = bytemap_get_value(p, x-1, y-1);
     }
     if (1) {
-      values[17] = bytemap_get_value(x-2, y,   p);
-      values[5]  = bytemap_get_value(x-1, y,   p);
+      values[17] = bytemap_get_value(p, x-2, y);
+      values[5]  = bytemap_get_value(p, x-1, y);
     }
     if (y < bytemap_get_height(p)-2) {
-      values[19] = bytemap_get_value(x-2, y+2, p);
-      values[20] = bytemap_get_value(x-1, y+2, p);
-      values[18] = bytemap_get_value(x-2, y+1, p);
-      values[6]  = bytemap_get_value(x-1, y+1, p);
+      values[19] = bytemap_get_value(p, x-2, y+2);
+      values[20] = bytemap_get_value(p, x-1, y+2);
+      values[18] = bytemap_get_value(p, x-2, y+1);
+      values[6]  = bytemap_get_value(p, x-1, y+1);
     } else if (y < bytemap_get_height(p)-1) {
-      values[18] = bytemap_get_value(x-2, y+1, p);
-      values[6]  = bytemap_get_value(x-1, y+1, p);
+      values[18] = bytemap_get_value(p, x-2, y+1);
+      values[6]  = bytemap_get_value(p, x-1, y+1);
     }
   } else if (x > 0) {
     if (y > 1) {
-      values[14] = bytemap_get_value(x-1, y-2, p);
-      values[4]  = bytemap_get_value(x-1, y-1, p);
+      values[14] = bytemap_get_value(p, x-1, y-2);
+      values[4]  = bytemap_get_value(p, x-1, y-1);
     } else if (y > 0) {
-      values[4]  = bytemap_get_value(x-1, y-1, p);
+      values[4]  = bytemap_get_value(p, x-1, y-1);
     }
     if (1) {
-      values[5]  = bytemap_get_value(x-1, y,   p);
+      values[5]  = bytemap_get_value(p, x-1, y);
     }
     if (y < bytemap_get_height(p)-2) {
-      values[20] = bytemap_get_value(x-1, y+2, p);
-      values[6]  = bytemap_get_value(x-1, y+1, p);
+      values[20] = bytemap_get_value(p, x-1, y+2);
+      values[6]  = bytemap_get_value(p, x-1, y+1);
     } else if (y < p->header.height-1) {
-      values[6]  = bytemap_get_value(x-1, y+1, p);
+      values[6]  = bytemap_get_value(p, x-1, y+1);
     }
   }
 
   if (1) {
     if (y > 1) {
-      values[13] = bytemap_get_value(x,   y-2, p);
-      values[3]  = bytemap_get_value(x,   y-1, p);
+      values[13] = bytemap_get_value(p, x,   y-2);
+      values[3]  = bytemap_get_value(p, x,   y-1);
     } else if (y > 0) {
-      values[3]  = bytemap_get_value(x,   y-1, p);
+      values[3]  = bytemap_get_value(p, x,   y-1);
     }
     if (1) {
-      values[0]  = bytemap_get_value(x,   y,   p);
+      values[0]  = bytemap_get_value(p, x,   y);
     }
     if (y < bytemap_get_height(p)-2) {
-      values[21] = bytemap_get_value(x,   y+2, p);
-      values[7]  = bytemap_get_value(x,   y+1, p);
+      values[21] = bytemap_get_value(p, x,   y+2);
+      values[7]  = bytemap_get_value(p, x,   y+1);
     } else if (y < p->header.height-1) {
-      values[7]  = bytemap_get_value(x,   y+1, p);
+      values[7]  = bytemap_get_value(p, x,   y+1);
     }
   }
 	
   if (x < bytemap_get_width(p)-2) {
     if (y > 1) {
-      values[11] = bytemap_get_value(x+2, y-2, p);
-      values[12] = bytemap_get_value(x+1, y-2, p);
-      values[10] = bytemap_get_value(x+2, y-1, p);
-      values[2]  = bytemap_get_value(x+1, y-1, p);
+      values[11] = bytemap_get_value(p, x+2, y-2);
+      values[12] = bytemap_get_value(p, x+1, y-2);
+      values[10] = bytemap_get_value(p, x+2, y-1);
+      values[2]  = bytemap_get_value(p, x+1, y-1);
     } else if (y > 0) {
-      values[10] = bytemap_get_value(x+2, y-1, p);
-      values[2]  = bytemap_get_value(x+1, y-1, p);
+      values[10] = bytemap_get_value(p, x+2, y-1);
+      values[2]  = bytemap_get_value(p, x+1, y-1);
     }
     if (1) {
-      values[9]  = bytemap_get_value(x+2, y,   p);
-      values[1]  = bytemap_get_value(x+1, y,   p);
+      values[9]  = bytemap_get_value(p, x+2, y);
+      values[1]  = bytemap_get_value(p, x+1, y);
     }
     if (y < bytemap_get_height(p)-2) {
-      values[23] = bytemap_get_value(x+2, y+2, p);
-      values[22] = bytemap_get_value(x+1, y+2, p);
-      values[24] = bytemap_get_value(x+2, y+1, p);
-      values[8]  = bytemap_get_value(x+1, y+1, p);
+      values[23] = bytemap_get_value(p, x+2, y+2);
+      values[22] = bytemap_get_value(p, x+1, y+2);
+      values[24] = bytemap_get_value(p, x+2, y+1);
+      values[8]  = bytemap_get_value(p, x+1, y+1);
     } else if (y < p->header.height-1) {
-      values[24] = bytemap_get_value(x+2, y+1, p);
-      values[8]  = bytemap_get_value(x+1, y+1, p);
+      values[24] = bytemap_get_value(p, x+2, y+1);
+      values[8]  = bytemap_get_value(p, x+1, y+1);
     }
   } else if (x < bytemap_get_width(p)-1) {
     if (y > 1) {
-      values[12] = bytemap_get_value(x+1, y-2, p);
-      values[2]  = bytemap_get_value(x+1, y-1, p);
+      values[12] = bytemap_get_value(p, x+1, y-2);
+      values[2]  = bytemap_get_value(p, x+1, y-1);
     } else if (y > 0)
-      values[2]  = bytemap_get_value(x+1, y-1, p);
+      values[2]  = bytemap_get_value(p, x+1, y-1);
     if (1)
-      values[1]  = bytemap_get_value(x+1, y,   p);
+      values[1]  = bytemap_get_value(p, x+1, y);
     if (y < bytemap_get_height(p)-2) {
-      values[22] = bytemap_get_value(x+1, y+2, p);
-      values[8]  = bytemap_get_value(x+1, y+1, p);
+      values[22] = bytemap_get_value(p, x+1, y+2);
+      values[8]  = bytemap_get_value(p, x+1, y+1);
     } else if (y < p->header.height-1)
-      values[8]  = bytemap_get_value(x+1, y+1, p);
+      values[8]  = bytemap_get_value(p, x+1, y+1);
   }
 }
 
@@ -557,74 +557,74 @@ static inline void bottom_shift_5x5(int value[9])
 
 static inline void read_lband_5x5_from_bitmap(int value[25], int x, int y, bitmap_t *m)
 {
-  value[15] = bitmap_get_value(x-2, y-2, m);
-  value[16] = bitmap_get_value(x-2, y-1, m);
-  value[17] = bitmap_get_value(x-2, y, m);
-  value[18] = bitmap_get_value(x-2, y+1, m);
-  value[19] = bitmap_get_value(x-2, y+2, m);
+  value[15] = bitmap_get_value(m, x-2, y-2);
+  value[16] = bitmap_get_value(m, x-2, y-1);
+  value[17] = bitmap_get_value(m, x-2, y);
+  value[18] = bitmap_get_value(m, x-2, y+1);
+  value[19] = bitmap_get_value(m, x-2, y+2);
 }
 
 static inline void read_rband_5x5_from_bitmap(int value[25], int x, int y, bitmap_t *m)
 {
-  value[11] = bitmap_get_value(x+2, y-2, m);
-  value[10] = bitmap_get_value(x+2, y-1, m);
-  value[9] = bitmap_get_value(x+2, y, m);
-  value[24] = bitmap_get_value(x+2, y+1, m);
-  value[23] = bitmap_get_value(x+2, y+2, m);
+  value[11] = bitmap_get_value(m, x+2, y-2);
+  value[10] = bitmap_get_value(m, x+2, y-1);
+  value[9] = bitmap_get_value(m, x+2, y);
+  value[24] = bitmap_get_value(m, x+2, y+1);
+  value[23] = bitmap_get_value(m, x+2, y+2);
 }
 
 static inline void read_tband_5x5_from_bitmap(int value[25], int x, int y, bitmap_t *m)
 {
-  value[15] = bitmap_get_value(x-2, y-2, m);
-  value[14] = bitmap_get_value(x-1, y-2, m);
-  value[13] = bitmap_get_value(x, y-2, m);
-  value[12] = bitmap_get_value(x+1, y-2, m);
-  value[11] = bitmap_get_value(x+2, y-2, m);
+  value[15] = bitmap_get_value(m, x-2, y-2);
+  value[14] = bitmap_get_value(m, x-1, y-2);
+  value[13] = bitmap_get_value(m, x, y-2);
+  value[12] = bitmap_get_value(m, x+1, y-2);
+  value[11] = bitmap_get_value(m, x+2, y-2);
 }
 
 static inline void read_bband_5x5_from_bitmap(int value[25], int x, int y, bitmap_t *m)
 {
-  value[19] = bitmap_get_value(x-2, y+2, m);
-  value[20] = bitmap_get_value(x-1, y+2, m);
-  value[21] = bitmap_get_value(x, y+2, m);
-  value[22] = bitmap_get_value(x+1, y+2, m);
-  value[23] = bitmap_get_value(x+2, y+2, m);
+  value[19] = bitmap_get_value(m, x-2, y+2);
+  value[20] = bitmap_get_value(m, x-1, y+2);
+  value[21] = bitmap_get_value(m, x, y+2);
+  value[22] = bitmap_get_value(m, x+1, y+2);
+  value[23] = bitmap_get_value(m, x+2, y+2);
 }
 
 static inline void read_lband_5x5_from_bytemap(int value[25], int x, int y, bytemap_t *m)
 {
-  value[15] = bytemap_get_value(x-2, y-2, m);
-  value[16] = bytemap_get_value(x-2, y-1, m);
-  value[17] = bytemap_get_value(x-2, y, m);
-  value[18] = bytemap_get_value(x-2, y+1, m);
-  value[19] = bytemap_get_value(x-2, y+2, m);
+  value[15] = bytemap_get_value(m, x-2, y-2);
+  value[16] = bytemap_get_value(m, x-2, y-1);
+  value[17] = bytemap_get_value(m, x-2, y);
+  value[18] = bytemap_get_value(m, x-2, y+1);
+  value[19] = bytemap_get_value(m, x-2, y+2);
 }
 
 static inline void read_rband_5x5_from_bytemap(int value[25], int x, int y, bytemap_t *m)
 {
-  value[11] = bytemap_get_value(x+2, y-2, m);
-  value[10] = bytemap_get_value(x+2, y-1, m);
-  value[9] = bytemap_get_value(x+2, y, m);
-  value[24] = bytemap_get_value(x+2, y+1, m);
-  value[23] = bytemap_get_value(x+2, y+2, m);
+  value[11] = bytemap_get_value(m, x+2, y-2);
+  value[10] = bytemap_get_value(m, x+2, y-1);
+  value[9] = bytemap_get_value(m, x+2, y);
+  value[24] = bytemap_get_value(m, x+2, y+1);
+  value[23] = bytemap_get_value(m, x+2, y+2);
 }
 
 static inline void read_tband_5x5_from_bytemap(int value[25], int x, int y, bytemap_t *m)
 {
-  value[15] = bytemap_get_value(x-2, y-2, m);
-  value[14] = bytemap_get_value(x-1, y-2, m);
-  value[13] = bytemap_get_value(x, y-2, m);
-  value[12] = bytemap_get_value(x+1, y-2, m);
-  value[11] = bytemap_get_value(x+2, y-2, m);
+  value[15] = bytemap_get_value(m, x-2, y-2);
+  value[14] = bytemap_get_value(m, x-1, y-2);
+  value[13] = bytemap_get_value(m, x, y-2);
+  value[12] = bytemap_get_value(m, x+1, y-2);
+  value[11] = bytemap_get_value(m, x+2, y-2);
 }
 
 static inline void read_bband_5x5_from_bytemap(int value[25], int x, int y, bytemap_t *m)
 {
-  value[19] = bytemap_get_value(x-2, y+2, m);
-  value[20] = bytemap_get_value(x-1, y+2, m);
-  value[21] = bytemap_get_value(x, y+2, m);
-  value[22] = bytemap_get_value(x+1, y+2, m);
-  value[23] = bytemap_get_value(x+2, y+2, m);
+  value[19] = bytemap_get_value(m, x-2, y+2);
+  value[20] = bytemap_get_value(m, x-1, y+2);
+  value[21] = bytemap_get_value(m, x, y+2);
+  value[22] = bytemap_get_value(m, x+1, y+2);
+  value[23] = bytemap_get_value(m, x+2, y+2);
 }
 
 /* The Number of Pixels with Given Value in 8 Neighbor of 3x3 Window
@@ -730,7 +730,7 @@ void stentiford_pre_smooth_for_thinning(bitmap_t *q, bitmap_t *p)
 	  }
 	  //2:connecting, 3:branching, 4:crossing, and 5:interior it is excluded
 	  if (connectivity < 2)
-	    bytemap_put_value(2, x, y, temp);
+	    bytemap_put_value(2, temp, x, y);
 	}
       }
       left_shift_3x3(values);
@@ -738,8 +738,8 @@ void stentiford_pre_smooth_for_thinning(bitmap_t *q, bitmap_t *p)
   }
   for (y = 0; y < q->header.height; y++) {
     for (x = 0; x < q->header.width; x++) {
-      if (bytemap_get_value(x, y, temp) == 2)
-	bytemap_put_value(0, x, y, temp);
+      if (bytemap_get_value(temp, x, y) == 2)
+	bytemap_put_value(0, temp, x, y);
     }
   }
   bytemap2bitmap(q, temp);
@@ -841,26 +841,26 @@ void stentiford_acute_angle_emphasis_for_thinning(bitmap_t *q, bitmap_t *p)
 	read_rband_5x5_from_bytemap(values, x, y, del);
 	if (values[0] == 1) {
 	  if (MATCH_DU_D1(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 2 && MATCH_DU_D2(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 3 && MATCH_DU_D3(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 4 && MATCH_DU_D4(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 5 && MATCH_DU_D5(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 
 	  if (MATCH_DU_U1(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 2 && MATCH_DU_U2(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 3 && MATCH_DU_U3(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 4 && MATCH_DU_U4(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	  else if (k >= 5 && MATCH_DU_U5(values))
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	}
 	left_shift_5x5(values);
       }
@@ -868,8 +868,8 @@ void stentiford_acute_angle_emphasis_for_thinning(bitmap_t *q, bitmap_t *p)
     again = 0;
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
-	if (bytemap_get_value(x, y, del) == 2) {
-	  bytemap_put_value(0, x, y, del);
+	if (bytemap_get_value(del, x, y) == 2) {
+	  bytemap_put_value(0, del, x, y);
 	  again = 1;
 	}
       }
@@ -908,7 +908,7 @@ static void stentiford_M1_templating(bytemap_t *del)
 	    connectivity += (values[i] != 1) - (values[i] != 1) * (values[i1] != 1) * (values[i2] != 1);
 	  }
 	  if (connectivity == 1)
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	}
       }
       left_shift_3x3(values);
@@ -944,7 +944,7 @@ static void stentiford_M2_templating(bytemap_t *del)
 	    connectivity += (values[i] != 1) - (values[i] != 1) * (values[i1] != 1) * (values[i2] != 1);
 	  }
 	  if (connectivity == 1)
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	}
       }
       bottom_shift_3x3(values);
@@ -980,7 +980,7 @@ static void stentiford_M3_templating(bytemap_t *del)
 	    connectivity += (values[i] != 1) - (values[i] != 1) * (values[i1] != 1) * (values[i2] != 1);
 	  }
 	  if (connectivity == 1)
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	}
       }
       right_shift_3x3(values);
@@ -1017,7 +1017,7 @@ static void stentiford_M4_templating(bytemap_t *del)
 	    connectivity += (values[i] != 1) - (values[i] != 1) * (values[i1] != 1) * (values[i2] != 1);
 	  }
 	  if (connectivity == 1)
-	    bytemap_put_value(2, x, y, del);
+	    bytemap_put_value(2, del, x, y);
 	}
       }
       top_shift_3x3(values);
@@ -1053,8 +1053,8 @@ void stentiford_thinning(bitmap_t *q, bitmap_t *p)
     /* Delete pixels that are marked (== 2) */
     for (y = 0; y < bytemap_get_height(del); y++) {
       for (x = 0; x < bytemap_get_width(del); x++) {
-	if (bytemap_get_value(x, y, del) == 2) {
-	  bytemap_put_value(0, x, y, del);
+	if (bytemap_get_value(del, x, y) == 2) {
+	  bytemap_put_value(0, del, x, y);
 	  not_done = 1;
 	}
       }
@@ -1107,7 +1107,7 @@ void zhang_suen_thinning(bitmap_t *q, bitmap_t *p)
 	    if (connectivity == 1) {
 	      if (values[1]*values[3]*values[5] == 0 &&
 		  values[3]*values[7]*values[5] == 0) {
-		bitmap_set_value(x, y, del);
+		bitmap_set_value(del, x, y);
 	      }
 	    }
 	  }
@@ -1119,9 +1119,9 @@ void zhang_suen_thinning(bitmap_t *q, bitmap_t *p)
     // delete the marked pixels
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
-	if (bitmap_isset(x, y, del)) {
-	  bitmap_reset_value(x, y, del);
-	  bytemap_put_value(0, x, y, temp);
+	if (bitmap_isset(del, x, y)) {
+	  bitmap_reset_value(del, x, y);
+	  bytemap_put_value(0, temp, x, y);
 	  not_done = 1;
 	}
       }
@@ -1148,7 +1148,7 @@ void zhang_suen_thinning(bitmap_t *q, bitmap_t *p)
 	    if (connectivity == 1) {
 	      if (values[3]*values[1]*values[7] == 0 &&
 		  values[1]*values[7]*values[5] == 0) {
-		bitmap_set_value(x, y, del);
+		bitmap_set_value(del, x, y);
 	      }
 	    }
 	  }
@@ -1160,10 +1160,10 @@ void zhang_suen_thinning(bitmap_t *q, bitmap_t *p)
     not_done = 0;
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
-	if (bitmap_isset(x, y, del)) {
+	if (bitmap_isset(del, x, y)) {
 	  not_done = 1;
-	  bitmap_reset_value(x, y, del);
-	  bytemap_put_value(0, x, y, temp);
+	  bitmap_reset_value(del, x, y);
+	  bytemap_put_value(0, temp, x, y);
 	}
       }
     }
@@ -1278,8 +1278,8 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
 	       (edge_5x5(1, 0, value) && edge_5x5(1, 1, value) && edge_5x5(0, 1, value)));
 	  if (!k) {
 	    edge_5x5(0, 0, value);
-	    if (t01) bytemap_put_value(value[0] | 4, x, y, temp);
-	    bytemap_put_value(value[0] | 2, x, y, temp);
+	    if (t01) bytemap_put_value(value[0] | 4, temp, x, y);
+	    bytemap_put_value(value[0] | 2, temp, x, y);
 	    again = 1;
 	  }
 	}
@@ -1288,8 +1288,8 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
     }
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
-	if (bytemap_get_value(x, y, temp) & 0x02)
-	  bytemap_put_value(0, x, y, temp);
+	if (bytemap_get_value(temp, x, y) & 0x02)
+	  bytemap_put_value(0, temp, x, y);
       }
     }
     // Sub-iteration 2:
@@ -1304,7 +1304,7 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
 	       (edge_5x5(1, 0, value) && edge_5x5(0, -1, value) && edge_5x5(0, 1, value)) ||
 	       (edge_5x5(0, 1, value) && edge_5x5(1, 0, value) && edge_5x5(1, 1, value)));
 	  if (!k) {
-	    bytemap_put_value(value[0] | 0x02, x, y, temp);
+	    bytemap_put_value(value[0] | 0x02, temp, x, y);
 	    again = 1;
 	  }
 	}
@@ -1313,11 +1313,11 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
     }
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
-	val = bytemap_get_value(x, y, temp);
+	val = bytemap_get_value(temp, x, y);
 	if (val & 0x02)
-	  bytemap_put_value(0, x, y, temp);
+	  bytemap_put_value(0, temp, x, y);
 	else if (val > 0)
-	  bytemap_put_value(1, x, y, temp);
+	  bytemap_put_value(1, temp, x, y);
       }
     }
   }
@@ -1331,7 +1331,7 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
 	      ((value[1] && !value[2] && !value[6] && (!value[5] || !value[7])) ||
 	       (value[5] && !value[4] && !value[8] && (!value[1] || !value[7]))));
 	if (!k) {
-	  bytemap_put_value(val | 0x02, x, y, temp);
+	  bytemap_put_value(val | 0x02, temp, x, y);
 	}
       }
       left_shift_3x3(value);
@@ -1339,9 +1339,9 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
   }
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
-      val = bytemap_get_value(x, y, temp);
-      if (val & 0x02) bytemap_put_value(0, x, y, temp);
-      else if (val > 0) bytemap_put_value(1, x, y, temp);
+      val = bytemap_get_value(temp, x, y);
+      if (val & 0x02) bytemap_put_value(0, temp, x, y);
+      else if (val > 0) bytemap_put_value(1, temp, x, y);
     }
   }
   // Southward bias
@@ -1354,7 +1354,7 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
 	      ((value[1] && !value[8] && !value[4] && (!value[5] || !value[3])) ||
 	       (value[5] && !value[6] && !value[2] && (!value[1] || !value[3]))));
 	if (!k) {
-	  bytemap_put_value(val | 0x02, x, y, temp);
+	  bytemap_put_value(val | 0x02, temp, x, y);
 	}
       }
       left_shift_3x3(value);
@@ -1362,9 +1362,9 @@ void holt_et_al_thinning(bitmap_t *q, bitmap_t *p)
   }
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
-      val = bytemap_get_value(x, y, temp);
-      if (val & 0x02) bytemap_put_value(0, x, y, temp);
-      else if (val > 0) bytemap_put_value(1, x, y, temp);
+      val = bytemap_get_value(temp, x, y);
+      if (val & 0x02) bytemap_put_value(0, temp, x, y);
+      else if (val > 0) bytemap_put_value(1, temp, x, y);
     }
   }
   bytemap2bitmap(q, temp);
@@ -1383,7 +1383,7 @@ static inline void zhangsuen_holt_edge_finding(bitmap_t *edge, bitmap_t *q)
     read_3x3_from_bitmap(values, 1, y, q);
     for (x = 1; x < w-1; x++) {
       read_rband_3x3_from_bitmap(values, x, y, q);
-      if (edge_3x3(values)) bitmap_set_value(x, y, edge);
+      if (edge_3x3(values)) bitmap_set_value(edge, x, y);
       left_shift_3x3(values);
     }
   }
@@ -1477,7 +1477,7 @@ static int zhangsuen_holt_mark_delete(bitmap_t *del, bitmap_t *q, bitmap_t *edge
 	      (edges[1] == 1 && qs[3] == 1 && qs[7] == 1) ||
 	      (edges[7] == 1 && qs[5] == 1 && qs[1] == 1) ||
 	      (edges[1] == 1 && edges[8] == 1 && edges[7] == 1))) {
-	  bitmap_set_value(x, y, del);
+	  bitmap_set_value(del, x, y);
 	  not_done = 1;
 	}
       }
@@ -1582,9 +1582,9 @@ static inline void zhangsuen_holt_delete(bitmap_t *q, bitmap_t *del)
 	
   for (y = 0; y < del->header.height; y++) {
     for (x = 0; x < del->header.width; x++) {
-      if (bitmap_isset(x, y, del)) {
-	bitmap_reset_value(x, y, del);
-	bitmap_reset_value(x, y, q);
+      if (bitmap_isset(del, x, y)) {
+	bitmap_reset_value(del, x, y);
+	bitmap_reset_value(q, x, y);
       }
     }
   }
@@ -1609,7 +1609,7 @@ static void zhangsuen_mark_stair(bitmap_t *del, bitmap_t *p, int north_south)
 	       (value[5] && !value[4] && !value[8] && (!value[1] || !value[7]))))) {
 	  //BITMAP_RESET(x, y, del);		/* Survives */
 	} else {
-	  bitmap_set_value(x, y, del);
+	  bitmap_set_value(del, x, y);
 	}
 	left_shift_3x3(value);
       }
@@ -1625,7 +1625,7 @@ static void zhangsuen_mark_stair(bitmap_t *del, bitmap_t *p, int north_south)
 	       (value[5] && !value[6] && !value[2] && (!value[1] || !value[3]))))) {
 	  //BITMAP_RESET(x, y, del);		/* Survives */
 	} else {
-	  bitmap_set_value(x, y, del);
+	  bitmap_set_value(del, x, y);
 	}
 	left_shift_3x3(value);
       }
@@ -1884,14 +1884,14 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 
     link = dlist_glimpse(0, edge);
     p = (point_t *)link->object;
-    bitmap_set_value(point_get_x(p), point_get_y(p), marker);
+    bitmap_set_value(marker, point_get_x(p), point_get_y(p));
 
     while (1) {
       found = false;
       for (i = 0; i < 8; i++) {
 	x = point_get_x(p) + dx[i]; y = point_get_y(p) + dy[i];
 
-	if (bitmap_isset(x, y, marker) || bitmap_isreset(x, y, bin)) continue;
+	if (bitmap_isset(marker, x, y) || bitmap_isreset(bin, x, y)) continue;
 
 	read_3x3_from_bitmap(value, x, y, bin);
 
@@ -1900,13 +1900,13 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 	  point_inc_ref(p);
 	  link = dlink_new(); link->object = (void *)p;
 	  dlist_insert(link, edge);
-	  bitmap_set_value(x, y, marker);
+	  bitmap_set_value(marker, x, y);
 
 	  branch = dlist_new();
 	  dlist_inc_ref(branch);
 	  link->spare = (void *)branch;
 	  for (j = 0; j < 8; j++) {
-	    if (bitmap_isreset(x + dx[j], y + dy[j], marker) && value[j + 1]) {
+	    if (bitmap_isreset(marker, x + dx[j], y + dy[j]) && value[j + 1]) {
 	      // allocate new edge
 	      edge = dlist_new();
 	      p = point_new_and_assign(x + dx[j], y + dy[j], 0);
@@ -1934,7 +1934,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
       for (i = 0; i < 8; i++) {
 	x = point_get_x(p) + dx[i]; y = point_get_y(p) + dy[i];
 
-	if (bitmap_isset(x, y, marker) || bitmap_isreset(x, y, bin)) continue;
+	if (bitmap_isset(marker, x, y) || bitmap_isreset(bin, x, y)) continue;
 
 	read_3x3_from_bitmap(value, x, y, bin);
 
@@ -1945,7 +1945,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 	  point_inc_ref(p);
 	  link = dlink_new(); link->object = (void *)p;
 	  dlist_insert(link, edge);
-	  bitmap_set_value(x, y, marker);
+	  bitmap_set_value(marker, x, y);
 
 	  found = true;
 	  break;
@@ -1958,7 +1958,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
       for (i = 0; i < 8; i++) {
 	x = point_get_x(p) + dx[i]; y = point_get_y(p) + dy[i];
 
-	if (bitmap_isset(x, y, marker) || bitmap_isreset(x, y, bin)) continue;
+	if (bitmap_isset(marker, x, y) || bitmap_isreset(bin, x, y)) continue;
 
 	//printf("An end point is detected!\n");
 	// Terminate edge finding
@@ -1966,7 +1966,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 	point_inc_ref(p);
 	link = dlink_new(); link->object = (void *)p;
 	dlist_insert(link, edge);
-	bitmap_set_value(x, y, marker);
+	bitmap_set_value(marker, x, y);
 
 	found = true;
 	break;

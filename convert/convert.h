@@ -17,15 +17,15 @@
 #ifndef __CONVERT_H__
 #define __CONVERT_H__
 
-#include <matrix.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <floatmap.h>
-#include <dlink.h>
-#include <point_list.h>
-#include <vector.h>
+#include <linear_algebra/matrix.h>
+#include <linear_algebra/vector.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/floatmap.h>
+#include <buffering/dlink.h>
+#include <geometry/point_list.h>
 
 #ifdef __cplusplus
 extern "C" {

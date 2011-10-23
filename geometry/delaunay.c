@@ -20,13 +20,13 @@
 #include <assert.h>
 //#include <SDL.h>
 
-#include <delaunay.h>
-#include <point.h>
-#include <point_list.h>
-#include <line.h>
-#include <line_list.h>
-#include <triangle.h>
-#include <triangle_list.h>
+#include <geometry/delaunay.h>
+#include <geometry/point.h>
+#include <geometry/point_list.h>
+#include <geometry/line.h>
+#include <geometry/line_list.h>
+#include <geometry/triangle.h>
+#include <geometry/triangle_list.h>
 
 /*
 extern SDL_Surface *screen;

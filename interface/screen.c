@@ -27,8 +27,8 @@
 #endif
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
 
 #ifdef USE_LIBSDL
 
@@ -79,9 +79,9 @@ static void getbytemap(bytemap_t *r, bytemap_t *g, bytemap_t *b, SDL_Surface *im
     for (x = 0; x < w; x++) {
       colour = getpixel(image, x, y);
       SDL_GetRGB(colour, image->format, &rval, &gval, &bval);
-      if (r) bytemap_put_value(rval, x, y, r);
-      if (g) bytemap_put_value(gval, x, y, g);
-      if (b) bytemap_put_value(bval, x, y, b);
+      if (r) bytemap_put_value(rval, r, x, y);
+      if (g) bytemap_put_value(gval, g, x, y);
+      if (b) bytemap_put_value(bval, b, x, y);
     }
   }
 
@@ -187,11 +187,11 @@ static void putbytemap(bytemap_t *r, bytemap_t *g, bytemap_t *b, SDL_Surface *su
 
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
-      if (r) rval = bytemap_get_value(x, y, r);
+      if (r) rval = bytemap_get_value(r, x, y);
       else rval = 0;
-      if (g) gval = bytemap_get_value(x, y, g);
+      if (g) gval = bytemap_get_value(g, x, y);
       else gval = 0;
-      if (b) bval = bytemap_get_value(x, y, b);
+      if (b) bval = bytemap_get_value(b, x, y);
       else bval = 0;
       colour = SDL_MapRGB(surface->format, rval, gval, bval);
       putpixel(surface, x, y, colour);
@@ -224,11 +224,11 @@ static void putbitmap(bitmap_t *r, bitmap_t *g, bitmap_t *b, SDL_Surface *surfac
 
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
-      if (r) rval = bitmap_get_value(x, y, r) ? 255 : 0;
+      if (r) rval = bitmap_get_value(r, x, y) ? 255 : 0;
       else rval = 0;
-      if (g) gval = bitmap_get_value(x, y, g) ? 255 : 0;
+      if (g) gval = bitmap_get_value(g, x, y) ? 255 : 0;
       else gval = 0;
-      if (b) bval = bitmap_get_value(x, y, b) ? 255 : 0;
+      if (b) bval = bitmap_get_value(b, x, y) ? 255 : 0;
       else bval = 0;
       colour = SDL_MapRGB(surface->format, rval, gval, bval);
       putpixel(surface, x, y, colour);
@@ -272,6 +272,8 @@ void deinitialize_screen(void)
 
 void load_and_display_BMP(const char *path)
 {
+  SDL_Rect src, dst;
+
   image = SDL_LoadBMP(path);
 
   /*
@@ -282,7 +284,24 @@ void load_and_display_BMP(const char *path)
   if (image->format->palette && screen->format->palette) {
     SDL_SetColors(screen, image->format->palette->colors, 0, image->format->palette->ncolors);
   }
-  SDL_BlitSurface(image, NULL, screen, NULL);
+
+  if (image->w > screen->w) {
+    src.x = (image->w - screen->w) / 2; src.w = screen->w;
+    dst.x = 0; dst.w = screen->w;
+  } else {
+    src.x = 0; src.w = image->w;
+    dst.x = (screen->w - image->w) / 2; dst.w = image->w;
+  }
+
+  if (image->h > screen->h) {
+    src.y = (image->h - screen->h) / 2; src.h = screen->h;
+    dst.y = 0; dst.h = screen->h;
+  } else {
+    src.y = 0; src.h = image->h;
+    dst.y = (screen->h - image->h) / 2; dst.h = image->h;
+  }
+
+  SDL_BlitSurface(image, &src, screen, &dst);
 }
 
 void save_screen_as_BMP(const char *fn)

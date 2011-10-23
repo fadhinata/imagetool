@@ -19,11 +19,11 @@
 #ifndef __DRAW_LINE_H__
 #define __DRAW_LINE_H__
 
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <floatmap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/floatmap.h>
 
 #ifdef __cplusplus
 extern "C" {

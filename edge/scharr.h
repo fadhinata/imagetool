@@ -18,10 +18,10 @@
 #define __SCHARR_H__
 
 #include <common.h>
-#include <matrix.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
+#include <linear_algebra/matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
 
 #ifdef __cplusplus
 extern "C" {

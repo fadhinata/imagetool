@@ -19,9 +19,10 @@
 #include <math.h>
 #include <malloc.h>
 #include <assert.h>
-#include <bezier.h>
+
 #include <common.h>
-#include <point_list.h>
+#include <spline/bezier.h>
+#include <geometry/point_list.h>
 
 /* Bezier curve equation
  * for 0 <= u <= 1 and n + 1 ctrol-points,
@@ -79,7 +80,7 @@ void matrix_bezier_spline_curve(matrix_t *plots, matrix_t *controls)
 {
   int i, j, k, c, n;
   int ndim, nctrl, nsample;
-  double mu, *pbuf, blending, *temp;
+  real_t mu, *pbuf, blending, *temp;
 
   assert(plots);
   assert(matrix_get_rows(plots) > 3);
@@ -91,18 +92,19 @@ void matrix_bezier_spline_curve(matrix_t *plots, matrix_t *controls)
   nctrl = matrix_get_rows(controls);
   ndim = matrix_get_columns(controls);
 	
-  temp = (double *)malloc(ndim * sizeof(double));
+  temp = (real_t *)malloc(ndim * sizeof(real_t));
   assert(temp);
 
   // Just copy the first point
+  //  matrix_copy_matrix(plots, 0, 0, controls, 0, 0, matrix_get_columns(controls), 1);
   pbuf = matrix_get_buffer(plots);
   for (j = 0; j < ndim; j++)
-    *(pbuf+j) = *(controls->real+j);
+    *(pbuf + j) = *(controls->real+j);
   pbuf += matrix_get_columns(plots);
 
-  for (i = 1; i < nsample-1; i++) {
-    memset(temp, 0, ndim * sizeof(double));
-    mu = (double)i / (double)nsample;
+  for (i = 1; i < nsample - 1; i++) {
+    memset(temp, 0, ndim * sizeof(real_t));
+    mu = (real_t)i / (real_t)nsample;
     n = nctrl-1;
     for (c = 0; c <= n; c++) {
       /* blending function need to be prevented OVERFLOW

@@ -17,13 +17,13 @@
 #ifndef __LABELING_H__
 #define __LABELING_H__
 
-#include <bitmap.h>
-#include <dwordmap.h>
-#include <vector.h>
-#include <matrix.h>
-#include <neighbor.h>
-#include <dlink.h>
-#include <point.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/dwordmap.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/matrix.h>
+#include <geometry/neighbor.h>
+#include <buffering/dlink.h>
+#include <geometry/point.h>
 
 #ifdef __cplusplus
 extern "C" {

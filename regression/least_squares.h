@@ -17,30 +17,21 @@
 #ifndef __LEAST_SQUARES_H__
 #define __LEAST_SQUARES_H__
 
-#include <matrix.h>
-#include <vector.h>
+#include <common.h>
+#include <linear_algebra/matrix.h>
+#include <linear_algebra/vector.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  typedef struct {
-    vector_t *mx;
-    double my;
-    vector_t *beta;
-    double beta0;
-  } pls1_t;
-
-  void linear_least_squares(vector_t *y, matrix_t *x, vector_t *beta);
+  void least_squares(vector_t *beta, matrix_t *x, vector_t *y);
   void line_regression_using_least_squares(vector_t *beta, vector_t *xcoord, vector_t *ycoord);
-  vector_t *vector_create_line_regression_using_least_squares(vector_t *xcoord, vector_t *ycoord);
+  vector_t *vector_new_and_line_regression_using_least_squares(vector_t *xcoord, vector_t *ycoord);
   void polynomial_regression_using_least_squares(vector_t *beta, vector_t *xcoord, vector_t *ycoord);
-  vector_t *vector_create_polynomial_regression_using_least_squares(vector_t *xcoord, vector_t *ycoord, int n);
+  vector_t *vector_new_and_polynomial_regression_using_least_squares(vector_t *xcoord, vector_t *ycoord, int order);
   void multiple_linear_regression_using_least_squares(vector_t *beta, matrix_t *xcoord, vector_t *ycoord);
-  vector_t *vector_create_multiple_linear_regression_using_least_squares(matrix_t *xcoord, vector_t *ycoord);
-  pls1_t *pls1_create(int ndim);
-  void pls1_delete(pls1_t *p);
-  void pls1_calibration(pls1_t *pls1, matrix_t *x, vector_t *y, int n);
+  vector_t *vector_new_and_multiple_linear_regression_using_least_squares(matrix_t *xcoord, vector_t *ycoord);
 
 #ifdef __cplusplus
 }

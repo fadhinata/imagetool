@@ -17,8 +17,9 @@
 #include <malloc.h>
 #include <string.h>
 #include <assert.h>
+
 #include <common.h>
-#include <bitmap.h>
+#include <pixmap/bitmap.h>
 
 bitmap_t *bitmap_new(int w, int h)
 {

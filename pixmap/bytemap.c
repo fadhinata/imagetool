@@ -14,15 +14,13 @@
  You should have received a copy of the GNU Lesser General Public License
  along with this program; if not, please visit www.gnu.org.
 */
-
-#include <stdint.h>
 #include <malloc.h>
 #include <string.h>
 #include <assert.h>
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
 
 bytemap_t *bytemap_new(int w, int h)
 {

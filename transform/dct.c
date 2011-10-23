@@ -15,7 +15,7 @@
  along with this program; if not, please visit www.gnu.org.
 */
 #include <math.h>
-#include <matrix.h>
+#include <linear_algebra/matrix.h>
 
 #define COEFF 0.7071067781
 

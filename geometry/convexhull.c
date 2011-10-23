@@ -19,10 +19,10 @@
 #include <malloc.h>
 #include <assert.h>
 
-#include <dlink.h>
-#include <point_list.h>
-#include <polygon.h>
-#include <convexhull.h>
+#include <buffering/dlink.h>
+#include <geometry/point_list.h>
+#include <geometry/polygon.h>
+#include <geometry/convexhull.h>
 
 extern void keyhit(void);
 extern void putline(int x1, int y1, int x2, int y2, int r, int g, int b);

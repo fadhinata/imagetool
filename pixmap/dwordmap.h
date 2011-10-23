@@ -14,13 +14,20 @@
  You should have received a copy of the GNU Lesser General Public License
  along with this program; if not, please visit www.gnu.org.
 */
-
 #ifndef __DWORDMAP_H__
 #define __DWORDMAP_H__
 
+#ifdef _MSC_VER
+#include <limits.h>
+typedef unsigned __int32 uint32_t;
+typedef __int32 int32_t;
+#define UINT32_MAX ULONG_MAX
+#else
 #include <stdint.h>
-#include <maphdr.h>
-#include <bitmap.h>
+#endif
+
+#include <pixmap/maphdr.h>
+#include <pixmap/bitmap.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,10 +42,10 @@ extern "C" {
 #define dwordmap_get_height(p) ((p)->header.height)
 #define dwordmap_get_buffer(p) ((p)->buffer)
 #define dwordmap_get_pitch(p) ((p)->header.pitch)
-#define dwordmap_get_value(x, y, p) (*((p)->buffer+(y)*(((p)->header.pitch)/sizeof(long))+(x)))
-#define dwordmap_put_value(q, x, y, p) (*((p)->buffer+(y)*((p)->header.pitch/sizeof(long))+(x)) = q)
-#define dwordmap_inc_value(x, y, m) ((*((m)->buffer+(y)*((m)->header.pitch)/sizeof(*((m)->buffer)) + (x)))++)
-#define dwordmap_dec_value(x, y, m) ((*((m)->buffer+(y)*((m)->header.pitch)/sizeof(*((m)->buffer)) + (x)))--)
+#define dwordmap_get_value(p, x, y) (*((p)->buffer+(y)*(((p)->header.pitch)/sizeof(long))+(x)))
+#define dwordmap_put_value(q, p, x, y) (*((p)->buffer+(y)*((p)->header.pitch/sizeof(long))+(x)) = q)
+#define dwordmap_inc_value(m, x, y) ((*((m)->buffer+(y)*((m)->header.pitch)/sizeof(*((m)->buffer)) + (x)))++)
+#define dwordmap_dec_value(m, x, y) ((*((m)->buffer+(y)*((m)->header.pitch)/sizeof(*((m)->buffer)) + (x)))--)
   dwordmap_t *dwordmap_new(int w, int h);
 #define dwordmap_destroy(m) { assert(m); free(m); }
 #define dwordmap_clone(m) dwordmap_new(dwordmap_get_width(m), dwordmap_get_height(m))

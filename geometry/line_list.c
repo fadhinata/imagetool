@@ -20,9 +20,9 @@
 #include <math.h>
 #include <string.h>
 
-#include <dlink.h>
-#include <line.h>
-#include <line_list.h>
+#include <buffering/dlink.h>
+#include <geometry/line.h>
+#include <geometry/line_list.h>
 
 void line_list_copy(line_list_t *copyer, line_list_t *copee)
 {

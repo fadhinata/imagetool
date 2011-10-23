@@ -20,15 +20,15 @@
 #include <assert.h>
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <floatmap.h>
-#include <matrix.h>
-#include <dlink.h>
-#include <vector.h>
-#include <point_list.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/floatmap.h>
+#include <linear_algebra/matrix.h>
+#include <buffering/dlink.h>
+#include <linear_algebra/vector.h>
+#include <geometry/point_list.h>
 
 #define MATRIX_TO_BITMAP(bitmap, matbuf, columns, rows, pickup, pickdown) { \
     int i, j;								\
@@ -613,8 +613,8 @@ vector_t *cvector_new_and_copy_point_list(point_list_t *list)
   vec = vector_new(point_list_get_count(list), true);
   for (link = list->tail->next; link != list->head; link = link->next) {
     p = (point_t *)link->object;
-    vector_put_value(p->x, i, vec);
-    ivector_put_value(p->y, i, vec);
+    vector_put_value(p->x, vec, i);
+    ivector_put_value(p->y, vec, i);
     i++;
   }
 
@@ -629,13 +629,13 @@ void point_list_copy_cvector(point_list_t *list, vector_t *vec)
 
   assert(list);
   assert(vec);
-  assert(vector_get_length(vec) == point_list_get_count(list));
+  assert(vector_get_dimension(vec) == point_list_get_count(list));
 
   i = 0;
   for (link = list->tail->next; link != list->head; link = link->next) {
     p = (point_t *)link->object;
-    p->x = vector_get_value(i, vec);
-    p->y = ivector_get_value(i, vec);
+    p->x = vector_get_value(vec, i);
+    p->y = ivector_get_value(vec, i);
     i++;
   }
 }

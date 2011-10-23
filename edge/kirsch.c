@@ -18,12 +18,13 @@
 #include <string.h>
 #include <math.h>
 #include <malloc.h>
-#include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <matrix.h>
 #include <assert.h>
+
+#include <common.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <linear_algebra/matrix.h>
 
 /* output range : -7650 (0x9de2) ~ +7620 (0x1de2) */
 #define KIRSCH_GRADIENT(type, gx_buf, gx_w, gx_h, gx_pitch, gy_buf, gy_w, gy_h, gy_pitch, p_buf, p_w, p_h, p_pitch) { \

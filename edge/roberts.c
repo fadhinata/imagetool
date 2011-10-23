@@ -17,13 +17,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <matrix.h>
 #include <assert.h>
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
+#include <linear_algebra/matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
 
 void roberts_magnitude(wordmap_t *q, bytemap_t *p)
 {

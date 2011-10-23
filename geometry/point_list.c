@@ -17,9 +17,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <point.h>
-#include <dlink.h>
-#include <point_list.h>
+#include <geometry/point.h>
+#include <buffering/dlink.h>
+#include <geometry/point_list.h>
 
 void point_list_copy(point_list_t *copyer, point_list_t *copee)
 {

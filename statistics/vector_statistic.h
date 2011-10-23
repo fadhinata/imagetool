@@ -17,15 +17,15 @@
 #ifndef __VECTOR_STATISTIC_H__
 #define __VECTOR_STATISTIC_H__
 
-#include <vector.h>
-#include <complex.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/complex2.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif 
 
-#define vector_get_mean(v) (vector_get_sum(v) / (real_t)vector_get_length(v))
-#define ivector_get_mean(v) (ivector_get_sum(v) / (real_t)vector_get_length(v))
+#define vector_get_mean(v) (vector_get_sum(v) / (real_t)vector_get_dimension(v))
+#define ivector_get_mean(v) (ivector_get_sum(v) / (real_t)vector_get_dimension(v))
   complex_t cvector_get_mean(vector_t *vec);
   real_t vector_get_2nd_moment(vector_t *vec, real_t org);
   real_t ivector_get_2nd_moment(vector_t *vec, real_t org);

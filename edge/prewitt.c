@@ -21,9 +21,9 @@
 #include <assert.h>
 
 #include <common.h>
-#include <matrix.h>
-#include <bytemap.h>
-#include <wordmap.h>
+#include <linear_algebra/matrix.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
 
 #define PREWITT_GRADIENT(type, gx_buf, gx_w, gx_h, gx_pitch, gy_buf, gy_w, gy_h, gy_pitch, p_buf, p_w, p_h, p_pitch) { \
     int x, y, w, h;							\

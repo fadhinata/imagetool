@@ -21,11 +21,11 @@
 #include <assert.h>
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <wordmap.h>
-#include <dwordmap.h>
-#include <floatmap.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <pixmap/wordmap.h>
+#include <pixmap/dwordmap.h>
+#include <pixmap/floatmap.h>
 
 /* To avoid the floating point operation that is the sin of arccos,
  * prepare the table for sin of arccos maked by below code:
@@ -92,57 +92,57 @@ void bitmap_draw_circle(int x, int y, int r, uint8_t val, bitmap_t *m)
     /* octant 0 */
     if ((((x + dy) >= 0) && ((x + dy) < w)) &&
 	(((y - dx) >= 0) && ((y - dx) < h))) {
-      if (val != 0) bitmap_set_value(x + dy, y - dx, m);
-      else bitmap_reset_value(x + dy, y - dx, m);
+      if (val != 0) bitmap_set_value(m, x + dy, y - dx);
+      else bitmap_reset_value(m, x + dy, y - dx);
       //*(p->buffer+(y - dx)*p->header.pitch+(x + dy)) = col;
     }
     /* octant 1 */
     if ((((x + dx) >= 0) && ((x + dx) < w)) &&
 	(((y - dy) >= 0) && ((y - dy) < h))) {
-      if (val != 0) bitmap_set_value(x + dx, y - dy, m);
-      else bitmap_reset_value(x + dx, y - dy, m);
+      if (val != 0) bitmap_set_value(m, x + dx, y - dy);
+      else bitmap_reset_value(m, x + dx, y - dy);
       //*(p->buffer+(y - dy)*p->header.pitch+(x + dx)) = col;
     }
     /* octant 2 */
     if ((((x - dx) >= 0) && ((x - dx) < w)) &&
 	(((y - dy) >= 0) && ((y - dy) < h))) {
-      if (val != 0) bitmap_set_value(x - dx, y - dy, m);
-      else bitmap_reset_value(x - dx, y - dy, m);
+      if (val != 0) bitmap_set_value(m, x - dx, y - dy);
+      else bitmap_reset_value(m, x - dx, y - dy);
       //*(m->buffer+(y - dy)*m->header.pitch+(x - dx)) = col;
     }
     /* octant 3 */
     if ((((x - dy) >= 0) && ((x - dy) < w)) &&
 	(((y - dx) >= 0) && ((y - dx) < h))) {
-      if (val != 0) bitmap_set_value(x - dy, y - dx, m);
-      else bitmap_reset_value(x - dy, y - dx, m);
+      if (val != 0) bitmap_set_value(m, x - dy, y - dx);
+      else bitmap_reset_value(m, x - dy, y - dx);
       //*(m->buffer+(y - dx)*m->header.pitch+(x - dy)) = col;
     }
     /* octant 4 */
     if ((((x - dy) >= 0) && ((x - dy) < w)) &&
 	(((y + dx) >= 0) && ((y + dx) < h))) {
-      if (val != 0) bitmap_set_value(x - dy, y + dx, m);
-      else bitmap_reset_value(x - dy, y + dx, m);
+      if (val != 0) bitmap_set_value(m, x - dy, y + dx);
+      else bitmap_reset_value(m, x - dy, y + dx);
       //*(m->buffer+(y + dx)*m->header.pitch+(x - dy)) = col;
     }
     /* octant 5 */
     if ((((x - dx) >= 0) && ((x - dx) < w)) &&
 	(((y + dy) >= 0) && ((y + dy) < h))) {
-      if (val != 0) bitmap_set_value(x - dx, y + dy, m);
-      else bitmap_reset_value(x - dx, y + dy, m);
+      if (val != 0) bitmap_set_value(m, x - dx, y + dy);
+      else bitmap_reset_value(m, x - dx, y + dy);
       //*(m->buffer+(y + dy)*m->header.pitch+(x - dx)) = col;
     }
     /* octant 6 */
     if ((((x + dx) >= 0) && ((x + dx) < w)) &&
 	(((y + dy) >= 0) && ((y + dy) < h))) {
-      if (val != 0) bitmap_set_value(x + dx, y + dy, m);
-      else bitmap_reset_value(x + dx, y + dy, m);
+      if (val != 0) bitmap_set_value(m, x + dx, y + dy);
+      else bitmap_reset_value(m, x + dx, y + dy);
       //*(m->buffer+(y + dy)*m->header.pitch+(x + dx)) = col;
     }
     /* octant 7 */
     if ((((x + dy) >= 0) && ((x + dy) < w)) &&
 	(((y + dx) >= 0) && ((y + dx) < h))) {
-      if (val != 0) bitmap_set_value(x + dy, y + dx, m);
-      else bitmap_reset_value(x + dy, y + dx, m);
+      if (val != 0) bitmap_set_value(m, x + dy, y + dx);
+      else bitmap_reset_value(m, x + dy, y + dx);
       //*(m->buffer+(y + dx)*m->header.pitch+(x + dy)) = col;
     }
     dx++;
@@ -245,57 +245,57 @@ void bitmap_draw_filled_circle(int xorg, int yorg, int radius, uint8_t val, bitm
       /* octant 0 */
       if ((((xorg + i) >= 0) && ((xorg + i) < w)) &&
 	  (((yorg - dx) >= 0) && ((yorg - dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg + i, yorg - dx, m);
-	else bitmap_reset_value(xorg + i, yorg - dx, m);
+	if (val != 0) bitmap_set_value(m, xorg + i, yorg - dx);
+	else bitmap_reset_value(m, xorg + i, yorg - dx);
 	//*(m->buffer+(yorg - dx)*m->header.pitch+(xorg + i)) = val;
       }
       /* octant 1 */
       if ((((xorg + dx) >= 0) && ((xorg + dx) < w)) &&
 	  (((yorg - i) >= 0) && ((yorg - i) < h))) {
-	if (val != 0) bitmap_set_value(xorg + dx, yorg - i, m);
-	else bitmap_reset_value(xorg + dx, yorg - i, m);
+	if (val != 0) bitmap_set_value(m, xorg + dx, yorg - i);
+	else bitmap_reset_value(m, xorg + dx, yorg - i);
 	//*(m->buffer+(yorg - i)*m->header.pitch+(xorg + dx)) = val;
       }
       /* octant 2 */
       if ((((xorg - dx) >= 0) && ((xorg - dx) < w)) &&
 	  (((yorg - i) >= 0) && ((yorg - i) < h))) {
-	if (val != 0) bitmap_set_value(xorg - dx, yorg - i, m);
-	else bitmap_reset_value(xorg - dx, yorg - i, m);
+	if (val != 0) bitmap_set_value(m, xorg - dx, yorg - i);
+	else bitmap_reset_value(m, xorg - dx, yorg - i);
 	//*(m->buffer+(yorg - i)*m->header.pitch+(xorg - dx)) = val;
       }
       /* octant 3 */
       if ((((xorg - i) >= 0) && ((xorg - i) < w)) &&
 	  (((yorg - dx) >= 0) && ((yorg - dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg - i, yorg - dx, m);
-	else bitmap_reset_value(xorg - i, yorg - dx, m);
+	if (val != 0) bitmap_set_value(m, xorg - i, yorg - dx);
+	else bitmap_reset_value(m, xorg - i, yorg - dx);
 	//*(m->buffer+(yorg - dx)*m->header.pitch+(xorg - i)) = val;
       }
       /* octant 4 */
       if ((((xorg - i) >= 0) && ((xorg - i) < w)) &&
 	  (((yorg + dx) >= 0) && ((yorg + dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg - i, yorg + dx, m);
-	else bitmap_reset_value(xorg - i, yorg + dx, m);
+	if (val != 0) bitmap_set_value(m, xorg - i, yorg + dx);
+	else bitmap_reset_value(m, xorg - i, yorg + dx);
 	//*(m->buffer+(yorg + dx)*m->header.pitch+(xorg - i)) = val;
       }
       /* octant 5 */
       if ((((xorg - dx) >= 0) && ((xorg - dx) < w)) &&
 	  (((yorg + i) >= 0) && ((yorg + i) < h))) {
-	if (val != 0) bitmap_set_value(xorg - dx, yorg + i, m);
-	else bitmap_reset_value(xorg - dx, yorg + i, m);
+	if (val != 0) bitmap_set_value(m, xorg - dx, yorg + i);
+	else bitmap_reset_value(m, xorg - dx, yorg + i);
 	//*(m->buffer+(yorg + i)*m->header.pitch+(xorg - dx)) = val;
       }
       /* octant 6 */
       if ((((xorg + dx) >= 0) && ((xorg + dx) < w)) &&
 	  (((yorg + i) >= 0) && ((yorg + i) < h))) {
-	if (val != 0) bitmap_set_value(xorg + dx, yorg + i, m);
-	else bitmap_reset_value(xorg + dx, yorg + i, m);
+	if (val != 0) bitmap_set_value(m, xorg + dx, yorg + i);
+	else bitmap_reset_value(m, xorg + dx, yorg + i);
 	//*(m->buffer+(yorg + i)*m->header.pitch+(xorg + dx)) = val;
       }
       /* octant 7 */
       if ((((xorg + i) >= 0) && ((xorg + i) < w)) &&
 	  (((yorg + dx) >= 0) && ((yorg + dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg + i, yorg + dx, m);
-	else bitmap_reset_value(xorg + i, yorg + dx, m);
+	if (val != 0) bitmap_set_value(m, xorg + i, yorg + dx);
+	else bitmap_reset_value(m, xorg + i, yorg + dx);
 	//*(m->buffer+(yorg + dx)*m->header.pitch+(xorg + i)) = val;
       }
     }
@@ -397,57 +397,57 @@ void bitmap_fast_draw_circle(int x, int y, int r, uint8_t val, bitmap_t *m)
     /* octant 0 */
     if ((((x + dy) >= 0) && ((x + dy) < w)) &&
 	(((y - dx) >= 0) && ((y - dx) < h))) {
-      if (val != 0) bitmap_set_value(x + dy, y - dx, m);
-      else bitmap_reset_value(x + dy, y - dx, m);
+      if (val != 0) bitmap_set_value(m, x + dy, y - dx);
+      else bitmap_reset_value(m, x + dy, y - dx);
       //*(p->buffer+(y - dx)*p->header.pitch+(x + dy)) = col;
     }
     /* octant 1 */
     if ((((x + dx) >= 0) && ((x + dx) < w)) &&
 	(((y - dy) >= 0) && ((y - dy) < h))) {
-      if (val != 0) bitmap_set_value(x + dx, y - dy, m);
-      else bitmap_reset_value(x + dx, y - dy, m);
+      if (val != 0) bitmap_set_value(m, x + dx, y - dy);
+      else bitmap_reset_value(m, x + dx, y - dy);
       //*(p->buffer+(y - dy)*p->header.pitch+(x + dx)) = col;
     }
     /* octant 2 */
     if ((((x - dx) >= 0) && ((x - dx) < w)) &&
 	(((y - dy) >= 0) && ((y - dy) < h))) {
-      if (val != 0) bitmap_set_value(x - dx, y - dy, m);
-      else bitmap_reset_value(x - dx, y - dy, m);
+      if (val != 0) bitmap_set_value(m, x - dx, y - dy);
+      else bitmap_reset_value(m, x - dx, y - dy);
       //*(m->buffer+(y - dy)*m->header.pitch+(x - dx)) = col;
     }
     /* octant 3 */
     if ((((x - dy) >= 0) && ((x - dy) < w)) &&
 	(((y - dx) >= 0) && ((y - dx) < h))) {
-      if (val != 0) bitmap_set_value(x - dy, y - dx, m);
-      else bitmap_reset_value(x - dy, y - dx, m);
+      if (val != 0) bitmap_set_value(m, x - dy, y - dx);
+      else bitmap_reset_value(m, x - dy, y - dx);
       //*(m->buffer+(y - dx)*m->header.pitch+(x - dy)) = col;
     }
     /* octant 4 */
     if ((((x - dy) >= 0) && ((x - dy) < w)) &&
 	(((y + dx) >= 0) && ((y + dx) < h))) {
-      if (val != 0) bitmap_set_value(x - dy, y + dx, m);
-      else bitmap_reset_value(x - dy, y + dx, m);
+      if (val != 0) bitmap_set_value(m, x - dy, y + dx);
+      else bitmap_reset_value(m, x - dy, y + dx);
       //*(m->buffer+(y + dx)*m->header.pitch+(x - dy)) = col;
     }
     /* octant 5 */
     if ((((x - dx) >= 0) && ((x - dx) < w)) &&
 	(((y + dy) >= 0) && ((y + dy) < h))) {
-      if (val != 0) bitmap_set_value(x - dx, y + dy, m);
-      else bitmap_reset_value(x - dx, y + dy, m);
+      if (val != 0) bitmap_set_value(m, x - dx, y + dy);
+      else bitmap_reset_value(m, x - dx, y + dy);
       //*(m->buffer+(y + dy)*m->header.pitch+(x - dx)) = col;
     }
     /* octant 6 */
     if ((((x + dx) >= 0) && ((x + dx) < w)) &&
 	(((y + dy) >= 0) && ((y + dy) < h))) {
-      if (val != 0) bitmap_set_value(x + dx, y + dy, m);
-      else bitmap_reset_value(x + dx, y + dy, m);
+      if (val != 0) bitmap_set_value(m, x + dx, y + dy);
+      else bitmap_reset_value(m, x + dx, y + dy);
       //*(m->buffer+(y + dy)*m->header.pitch+(x + dx)) = col;
     }
     /* octant 7 */
     if ((((x + dy) >= 0) && ((x + dy) < w)) &&
 	(((y + dx) >= 0) && ((y + dx) < h))) {
-      if (val != 0) bitmap_set_value(x + dy, y + dx, m);
-      else bitmap_reset_value(x + dy, y + dx, m);
+      if (val != 0) bitmap_set_value(m, x + dy, y + dx);
+      else bitmap_reset_value(m, x + dy, y + dx);
       //*(m->buffer+(y + dx)*m->header.pitch+(x + dy)) = col;
     }
     dx++;
@@ -546,57 +546,57 @@ void bitmap_fast_draw_filled_circle(int xorg, int yorg, int radius, uint8_t val,
       /* octant 0 */
       if ((((xorg + i) >= 0) && ((xorg + i) < w)) &&
 	  (((yorg - dx) >= 0) && ((yorg - dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg + i, yorg - dx, m);
-	else bitmap_reset_value(xorg + i, yorg - dx, m);
+	if (val != 0) bitmap_set_value(m, xorg + i, yorg - dx);
+	else bitmap_reset_value(m, xorg + i, yorg - dx);
 	//*(m->buffer+(yorg - dx)*m->header.pitch+(xorg + i)) = val;
       }
       /* octant 1 */
       if ((((xorg + dx) >= 0) && ((xorg + dx) < w)) &&
 	  (((yorg - i) >= 0) && ((yorg - i) < h))) {
-	if (val != 0) bitmap_set_value(xorg + dx, yorg - i, m);
-	else bitmap_reset_value(xorg + dx, yorg - i, m);
+	if (val != 0) bitmap_set_value(m, xorg + dx, yorg - i);
+	else bitmap_reset_value(m, xorg + dx, yorg - i);
 	//*(m->buffer+(yorg - i)*m->header.pitch+(xorg + dx)) = val;
       }
       /* octant 2 */
       if ((((xorg - dx) >= 0) && ((xorg - dx) < w)) &&
 	  (((yorg - i) >= 0) && ((yorg - i) < h))) {
-	if (val != 0) bitmap_set_value(xorg - dx, yorg - i, m);
-	else bitmap_reset_value(xorg - dx, yorg - i, m);
+	if (val != 0) bitmap_set_value(m, xorg - dx, yorg - i);
+	else bitmap_reset_value(m, xorg - dx, yorg - i);
 	//*(m->buffer+(yorg - i)*m->header.pitch+(xorg - dx)) = val;
       }
       /* octant 3 */
       if ((((xorg - i) >= 0) && ((xorg - i) < w)) &&
 	  (((yorg - dx) >= 0) && ((yorg - dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg - i, yorg - dx, m);
-	else bitmap_reset_value(xorg - i, yorg - dx, m);
+	if (val != 0) bitmap_set_value(m, xorg - i, yorg - dx);
+	else bitmap_reset_value(m, xorg - i, yorg - dx);
 	//*(m->buffer+(yorg - dx)*m->header.pitch+(xorg - i)) = val;
       }
       /* octant 4 */
       if ((((xorg - i) >= 0) && ((xorg - i) < w)) &&
 	  (((yorg + dx) >= 0) && ((yorg + dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg - i, yorg + dx, m);
-	else bitmap_reset_value(xorg - i, yorg + dx, m);
+	if (val != 0) bitmap_set_value(m, xorg - i, yorg + dx);
+	else bitmap_reset_value(m, xorg - i, yorg + dx);
 	//*(m->buffer+(yorg + dx)*m->header.pitch+(xorg - i)) = val;
       }
       /* octant 5 */
       if ((((xorg - dx) >= 0) && ((xorg - dx) < w)) &&
 	  (((yorg + i) >= 0) && ((yorg + i) < h))) {
-	if (val != 0) bitmap_set_value(xorg - dx, yorg + i, m);
-	else bitmap_reset_value(xorg - dx, yorg + i, m);
+	if (val != 0) bitmap_set_value(m, xorg - dx, yorg + i);
+	else bitmap_reset_value(m, xorg - dx, yorg + i);
 	//*(m->buffer+(yorg + i)*m->header.pitch+(xorg - dx)) = val;
       }
       /* octant 6 */
       if ((((xorg + dx) >= 0) && ((xorg + dx) < w)) &&
 	  (((yorg + i) >= 0) && ((yorg + i) < h))) {
-	if (val != 0) bitmap_set_value(xorg + dx, yorg + i, m);
-	else bitmap_reset_value(xorg + dx, yorg + i, m);
+	if (val != 0) bitmap_set_value(m, xorg + dx, yorg + i);
+	else bitmap_reset_value(m, xorg + dx, yorg + i);
 	//*(m->buffer+(yorg + i)*m->header.pitch+(xorg + dx)) = val;
       }
       /* octant 7 */
       if ((((xorg + i) >= 0) && ((xorg + i) < w)) &&
 	  (((yorg + dx) >= 0) && ((yorg + dx) < h))) {
-	if (val != 0) bitmap_set_value(xorg + i, yorg + dx, m);
-	else bitmap_reset_value(xorg + i, yorg + dx, m);
+	if (val != 0) bitmap_set_value(m, xorg + i, yorg + dx);
+	else bitmap_reset_value(m, xorg + i, yorg + dx);
 	//*(m->buffer+(yorg + dx)*m->header.pitch+(xorg + i)) = val;
       }
     }

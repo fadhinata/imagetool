@@ -17,201 +17,167 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
-#include <haar.h>
 #include <assert.h>
+
 #include <common.h>
+#include <wavelet/haar.h>
 
 #define H0 0.7071067810
 #define H1 0.7071067810
 
 #define SQRT2 1.4142135623
 
-/* haar fast wavelet transform */
-int hfwt(vector_t *q, vector_t *p)
+static void self_haar_fwt(vector_t *q)
 {
-  int n, m, i, k;
-  double *temp;
+  int n, m, i;
+  real_t *temp;
 
-  assert(q);
-  if (!q) return -1;
-  assert(p);
-  if (!p) return -1;
+  for (m = 0, n = 1; n < vector_get_dimension(q); n <<= 1) m++;
 
-  for (m = 0, n = 1; n < p->length; n <<= 1) m++;
-  assert(n == p->length);
-  if (n != p->length) return -1;
-  assert(n == q->length);
-  if (n != q->length) return -1;
-
-  /*****************************************/
-  temp = (double *)malloc(n*sizeof(double));
+  temp = (real_t *)malloc(n * sizeof(real_t));
   assert(temp);
-	
-  memcpy(q->real, p->real, p->length*sizeof(double));
+
   while (n > 1) {
-    for (i = 0; i < n/2; i++) {
-      temp[i]     = (*(q->real+2*i)+*(q->real+2*i+1))/SQRT2;
-      temp[n/2+i] = (*(q->real+2*i)-*(q->real+2*i+1))/SQRT2;
+    for (i = 0; i < n / 2; i++) {
+      temp[i]     = (vector_get_value(q, 2*i) + vector_get_value(q, 2*i + 1)) / SQRT2;
+      temp[n/2+i] = (vector_get_value(q, 2*i) - vector_get_value(q, 2*i + 1)) / SQRT2;
     }
-    for (i = 0; i < n; i++) *(q->real+i) = temp[i];
-    n = n/2;
+    for (i = 0; i < n; i++) vector_put_value(temp[i], q, i);
+    n /= 2;
   }
   free(temp);
-  return 0;
 }
 
-/* inverse haar fast wavelet transform */
-int ihfwt(vector_t *q, vector_t *p)
+// haar fast wavelet transform
+void haar_fwt(vector_t *q, vector_t *p)
+{
+  int n, m;
+
+  assert(q);
+  assert(p);
+
+  for (m = 0, n = 1; n < vector_get_dimension(p); n <<= 1) m++;
+
+  assert(n == vector_get_dimension(p));
+  assert(n == vector_get_dimension(q));
+
+  vector_copy(q, p);
+  self_haar_fwt(q);
+}
+
+static void self_haar_ifwt(vector_t *q)
 {
   int n, m, i, k;
-  double *temp;
+  real_t *temp;
 	
-  assert(q);
-  if (!q) return -1;
-  assert(p);
-  if (!p) return -1;
-	
-  for (m = 0, n = 1; n < p->length; n <<= 1) m++;
-  assert(n == p->length);
-  if (n != p->length) return -1;
-  assert(n == q->length);
-  if (n != q->length) return -1;
-	
-  /*****************************************/
-  temp = (double *)malloc(n*sizeof(double));
+  for (m = 0, n = 1; n < vector_get_dimension(q); n <<= 1) m++;
+
+  temp = (real_t *)malloc(n * sizeof(real_t));
   assert(temp);
 
-  memcpy(q->real, p->real, p->length*sizeof(double));
   k = 1;
   while (k < n) {
-    k = 2*k;
-    for (i = 0; i < k/2; i++) {
-      temp[2*i]   = (*(q->real+i)+*(q->real+k/2+i));
-      temp[2*i+1] = (*(q->real+i)-*(q->real+k/2+i));
+    k = 2 * k;
+    for (i = 0; i < k / 2; i++) {
+      temp[2*i]   = vector_get_value(q, i) + vector_get_value(q, k/2 + i);
+      temp[2*i+1] = vector_get_value(q, i) - vector_get_value(q, k/2 + i);
     }
-    for (i = 0; i < k; i++) *(q->real+i) = temp[i];
+    for (i = 0; i < k; i++) vector_put_value(temp[i], q, i);
   }
   free(temp);
-  return 0;
 }
 
-int hfwt2(matrix_t *q, matrix_t *p)
+// haar inverse fast wavelet transform
+void haar_ifwt(vector_t *q, vector_t *p)
 {
-  int i, j, k, n, m;
-  double *temp, *buffer;
-
+  int n, m;
+	
   assert(q);
-  if (!q) return -1;
   assert(p);
-  if (!p) return -1;
 	
-  for (m = 1; m < p->columns; m <<= 1);
-  assert(m == p->columns);
-  if (m != p->columns) return -1;
-  assert(m == q->columns);
-  if (m != q->columns) return -1;
-	
-  for (n = 1; n < p->rows; n <<= 1);
-  assert(n == p->rows);
-  if (n != p->rows) return -1;
-  assert(n == q->rows);
-  if (n != q->rows) return -1;
-	
-  /************************************************/
-  temp = (double *)malloc(max(m, n)*sizeof(double));
-  assert(temp);
+  for (m = 0, n = 1; n < vector_get_dimension(p); n <<= 1) m++;
 
-  matrix_copy(q, p);
-  //matrix_copy(q, 0, 0, p, 0, 0, p->columns, p->rows);
-  /* Transform the rows */
-  for (i = 0; i < n; i++) {
-    buffer = q->real+i*q->columns;
-    k = m;
-    while (k > 1) {
-      for (j = 0; j < k/2; j++) {
-	temp[j]     = (*(buffer+2*j)+*(buffer+2*j+1))/SQRT2;
-	temp[k/2+j] = (*(buffer+2*j)-*(buffer+2*j+1))/SQRT2;
-      }
-      for (j = 0; j < k; j++) *(buffer+j) = temp[j];
-      k = k/2;
-    }
-  }
+  assert(n == vector_get_dimension(p));
+  assert(n == vector_get_dimension(q));
 	
-  /* Transform the columns */
-  temp = (float *)malloc (sizeof(float)*p->rows);
-  for (j = 0; j < m; j++) {
-    buffer = q->real+j; //i*q->columns;
-    k = n;
-    while (k > 1) {
-      for (i = 0; i < k/2; i++) {
-	temp[i]     = (*(buffer+(2*i)*q->columns)+*(buffer+(2*i+1)*q->columns))/SQRT2;
-	temp[k/2+i] = (*(buffer+(2*i)*q->columns)-*(buffer+(2*i+1)*q->columns))/SQRT2;
-      }
-      for (i = 0; i < k; i++) *(buffer+i*q->columns) = temp[i];
-      k = k/2;
-    }
-  }
-  free(temp);
-  return 0;
+  vector_copy(q, p);
+  self_haar_ifwt(q);
 }
 
-int ihfwt2(matrix_t *q, matrix_t *p)
+void haar_fwt2(matrix_t *q, matrix_t *p)
 {
   int i, j, k, n, m;
-  double *temp, *buffer;
+  real_t *temp, *buffer;
+  vector_t *v;
 
   assert(q);
-  if (!q) return -1;
   assert(p);
-  if (!p) return -1;
 	
-  for (m = 1; m < p->columns; m <<= 1);
-  assert(m == p->columns);
-  if (m != p->columns) return -1;
-  assert(m == q->columns);
-  if (m != q->columns) return -1;
+  for (m = 1; m < matrix_get_columns(p); m <<= 1);
+  assert(m == matrix_get_columns(p));
+  assert(m == matrix_get_columns(q));
 	
-  for (n = 1; n < p->rows; n <<= 1);
-  assert(n == p->rows);
-  if (n != p->rows) return -1;
-  assert(n == q->rows);
-  if (n != q->rows) return -1;
+  for (n = 1; n < matrix_get_rows(p); n <<= 1);
+  assert(n == matrix_get_rows(p));
+  assert(n == matrix_get_rows(q));
 	
-  /************************************************/
-  temp = (double *)malloc(max(m, n)*sizeof(double));
-  assert(temp);
-
   matrix_copy(q, p);
-  //matrix_copy(q, 0, 0, p, 0, 0, p->columns, p->rows);
-  /* Transform the columns */
-  temp = (float *)malloc (sizeof(float)*p->rows);
-  for (j = 0; j < m; j++) {
-    buffer = q->real+j; //i*q->columns;
-    k = 1;
-    while (k < n) {
-      k = 2*k;
-      for (i = 0; i < k/2; i++) {
-	temp[2*i]   = (*(buffer+i*q->columns)+*(buffer+(k/2+i)*q->columns));
-	temp[2*i+1] = (*(buffer+i*q->columns)-*(buffer+(k/2+i)*q->columns));
-      }
-      for (i = 0; i < k; i++) *(buffer+i*q->columns) = temp[i];
-    }
-  }
-	
-  /* Transform the rows */
-  for (i = 0; i < n; i++) {
-    buffer = q->real+i*q->columns;
-    k = 1;
-    while (k < m) {
-      k = 2*k;
-      for (i = 0; i < k/2; i++) {
-	temp[2*i]   = (*(buffer+i)+*(buffer+k/2+i));
-	temp[2*i+1] = (*(buffer+i)-*(buffer+k/2+i));
-      }
-      for (i = 0; i < k; i++) *(buffer+i) = temp[i];
-    }
-  }
 
-  free(temp);
-  return 0;
+  // Transform the rows
+  v = vector_new(m, false);
+  for (i = 0; i < n; i++) {
+    vector_copy_row_vector_of_matrix(v, q, 0, i);
+    self_haar_fwt(v);
+    matrix_copy_row_vector(q, 0, i, v);
+  }
+  vector_destroy(v);
+
+  // Transform the columns
+  v = vector_new(n, false);
+  for (j = 0; j < m; j++) {
+    vector_copy_column_vector_of_matrix(v, q, j, 0);
+    self_haar_fwt(v);
+    matrix_copy_column_vector(q, j, 0, v);
+  }
+  vector_destroy(v);
+}
+
+void haar_ifwt2(matrix_t *q, matrix_t *p)
+{
+  int i, j, k, n, m;
+  vector_t *v;
+  real_t *temp, *buffer;
+
+  assert(q);
+  assert(p);
+	
+  for (m = 1; m < matrix_get_columns(p); m <<= 1);
+
+  assert(m == matrix_get_columns(p));
+  assert(m == matrix_get_columns(q));
+	
+  for (n = 1; n < matrix_get_rows(p); n <<= 1);
+
+  assert(n == matrix_get_rows(p));
+  assert(n == matrix_get_rows(q));
+	
+  matrix_copy(q, p);
+
+  // Transform the columns
+  v = vector_new(n, false);
+  for (j = 0; j < m; j++) {
+    vector_copy_column_vector_of_matrix(v, q, j, 0);
+    self_haar_fwt(v);
+    matrix_copy_column_vector(q, j, 0, v);
+  }
+  vector_destroy(v);
+	
+  // Transform the rows
+  v = vector_new(m, false);
+  for (i = 0; i < n; i++) {
+    vector_copy_row_vector_of_matrix(v, q, 0, i);
+    self_haar_fwt(v);
+    matrix_copy_row_vector(q, 0, i, v);
+  }
+  vector_destroy(v);
 }

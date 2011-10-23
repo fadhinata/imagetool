@@ -18,7 +18,8 @@
 #include <float.h>
 #include <math.h>
 #include <assert.h>
-#include <complex2.h>
+
+#include <linear_algebra/complex2.h>
 
 #define COMPLEX_OPCODE_COMPLEX(c, op1, a, op2, b) {	\
     assert(c);						\

@@ -18,9 +18,9 @@
 #define __HOUGH_LINE_H__
 
 #include <common.h>
-#include <bitmap.h>
-#include <dwordmap.h>
-#include <matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/dwordmap.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {

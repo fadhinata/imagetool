@@ -22,8 +22,13 @@
 extern "C" {
 #endif
 
+#ifdef _MSC_VER
+  typedef unsigned __int8 uint8_t;
+#else
 #include <stdint.h>
-#include <maphdr.h>
+#endif
+
+#include <pixmap/maphdr.h>
 
   typedef struct {
     maphdr_t header;
@@ -35,11 +40,13 @@ extern "C" {
 #define bitmap_get_buffer(p) ((p)->buffer)
 #define bitmap_get_width(p) ((p)->header.width)
 #define bitmap_get_height(p) ((p)->header.height)
-#define bitmap_get_value(x, y, p) (((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3)))>>(((int)(x))%8))&1)
-#define bitmap_set_value(x, y, p) ((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3))) |= 1<<(((int)(x))%8))
-#define bitmap_reset_value(x, y, p) ((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3))) &= ~(1<<(((int)(x))%8)))
-#define bitmap_isset(x, y, p) ((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3)))&(1<<(((int)(x))%8)))
-#define bitmap_isreset(x, y, p) (!((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3)))&(1<<(((int)(x))%8))))
+#define bitmap_get_value(p, x, y) (((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3)))>>(((int)(x))%8))&1)
+#define bitmap_set_value(p, x, y) ((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3))) |= 1<<(((int)(x))%8))
+#define bitmap_reset_value(p, x, y) ((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3))) &= ~(1<<(((int)(x))%8)))
+#define bitmap_put_value(v, p, x, y) ((v) != 0 ? bitmap_set_value(p, x, y) : bitmap_reset_value(p, x, y))
+#define bitmap_isset(p, x, y) ((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3)))&(1<<(((int)(x))%8)))
+#define bitmap_isreset(p, x, y) (!((*((p)->buffer+((int)(y))*(p)->header.pitch+(((int)(x))>>3)))&(1<<(((int)(x))%8))))
+
   bitmap_t *bitmap_new(int w, int h);
 #define bitmap_destroy(m) { assert(m); free(m); }
 #define bitmap_clone(m) bitmap_new(bitmap_get_width(m), bitmap_get_height(m))

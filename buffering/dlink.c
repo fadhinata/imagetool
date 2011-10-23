@@ -19,7 +19,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include <dlink.h>
+#include <buffering/dlink.h>
 
 dlink_t *dlink_new(void)
 {

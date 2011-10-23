@@ -17,11 +17,12 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
-#include <common.h>
-#include <labeling.h>
 #include <assert.h>
-#include <dlink.h>
-#include <point.h>
+
+#include <common.h>
+#include <labeling/labeling.h>
+#include <buffering/dlink.h>
+#include <geometry/point.h>
 
 #define UNLABEL (-1)
 
@@ -37,7 +38,6 @@ void label_info_insert(point_t *p, int pixels, label_info_t *labelinfo)
 
   link = dlink_new();
   point_inc_ref(p);
-  //p->reference++;
   link->object = (void *)p;
   link->spare = (void *)pixels;
   dlist_insert(link, labelinfo);
@@ -54,7 +54,6 @@ point_t *label_info_pop(int *pixels, label_info_t *labelinfo)
   link = dlist_pop((dlist_t *)labelinfo);
   *pixels = (int)link->spare;
   p = (point_t *)link->object;
-  //p->reference--;
   point_dec_ref(p);
   dlink_destroy(link);
 
@@ -145,15 +144,15 @@ int labeling(dwordmap_t *labelmap, label_info_t *labelinfo, bitmap_t *bin, neigh
   index = 0;
   for (r = 0; r < h; r++) {
     for (c = 0; c < w; c++) {
-      if (bitmap_isset(c, r, bin)) { // object
+      if (bitmap_isset(bin, c, r)) { // object
 	n = UNLABEL;
 	cnt = 0;
 	// examine connected components previewously labelled
 	for (k = 0; k < neighbor; k++) {
 	  j = c + dc[k]; if (!(j >= 0 && j < w)) continue;
 	  i = r + dr[k]; if (!(i >= 0 && i < h)) continue;
-	  if (bitmap_isset(j, i, bin)) { // object
-	    m = dwordmap_get_value(j, i, labelmap);
+	  if (bitmap_isset(bin, j, i)) { // object
+	    m = dwordmap_get_value(labelmap, j, i);
 	    assert(m != UNLABEL);
 	    save[cnt++] = m;
 	    // find asendant label 
@@ -167,7 +166,7 @@ int labeling(dwordmap_t *labelmap, label_info_t *labelinfo, bitmap_t *bin, neigh
 	if (n == UNLABEL) { // new one
 	  /* Not exist neighborhoods containing old labels,
 	     so new labeling occurred */
-	  dwordmap_put_value(index, c, r, labelmap);
+	  dwordmap_put_value(index, labelmap, c, r);
 	  merge[index] = UNLABEL;
 	  if (labelinfo) {
 	    xsum[index] = c;
@@ -177,7 +176,7 @@ int labeling(dwordmap_t *labelmap, label_info_t *labelinfo, bitmap_t *bin, neigh
 	  index++;
 	} else {
 	  // merge to the group with minimum label number
-	  dwordmap_put_value(n, c, r, labelmap);
+	  dwordmap_put_value(n, labelmap, c, r);
 	  assert(merge[n] == UNLABEL);
 	  if (labelinfo) {
 	    xsum[n] += c;
@@ -198,7 +197,7 @@ int labeling(dwordmap_t *labelmap, label_info_t *labelinfo, bitmap_t *bin, neigh
 	  }
 	}
       } else { // background
-	dwordmap_put_value(UNLABEL, c, r, labelmap);
+	dwordmap_put_value(UNLABEL, labelmap, c, r);
       }
     }
   }
@@ -223,12 +222,12 @@ int labeling(dwordmap_t *labelmap, label_info_t *labelinfo, bitmap_t *bin, neigh
 
   for (r = 0; r < h; r++) {
     for (c = 0; c < w; c++) {
-      i = dwordmap_get_value(c, r, labelmap);
+      i = dwordmap_get_value(labelmap, c, r);
       if (i != UNLABEL) {
 	if (merge[i] != UNLABEL) i = merge[i];
 	assert(merge[i] == UNLABEL);
 	n = label[i];
-	dwordmap_put_value(n, c, r, labelmap);
+	dwordmap_put_value(n, labelmap, c, r);
       }
     }
   }
@@ -283,10 +282,10 @@ int label_grep_largest_blob(bitmap_t *q, bitmap_t *p)
     //printf("area %d\n", area);
     for (i = 0; i < h; i++) {
       for (j = 0; j < w; j++) {
-	if (dwordmap_get_value(j, i, labelmap) == iarea) {
-	  bitmap_set_value(j, i, q);
+	if (dwordmap_get_value(labelmap, j, i) == iarea) {
+	  bitmap_set_value(q, j, i);
 	} else {
-	  bitmap_reset_value(j, i, q);
+	  bitmap_reset_value(q, j, i);
 	}
       }
     }

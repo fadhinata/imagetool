@@ -21,9 +21,9 @@
 #include <assert.h>
 
 #include <common.h>
-#include <point_list.h>
-#include <dwordmap.h>
-#include <chaincode.h>
+#include <geometry/point_list.h>
+#include <pixmap/dwordmap.h>
+#include <labeling/chaincode.h>
 
 /* 3 2 1 *
  * 4   0 *
@@ -85,7 +85,7 @@ int dwordmap_create_chaincode(chaincode_t *chain, dwordmap_t *image, long label)
       if (!(j >= 0 && j < w)) continue;
       i = y + dy[k % 8];
       if (!(i >= 0 && i < h)) continue;
-      if (dwordmap_get_value(j, i, image) == label) {
+      if (dwordmap_get_value(image, j, i) == label) {
 	//if (DWORDMAP_IS_EQUAL(label, image, j, i)) {
 	// find sweeping pixel
 	found = 1;
@@ -149,7 +149,7 @@ int bitmap_create_chaincode(chaincode_t *chain, bitmap_t *image)
       if (!(j >= 0 && j < w)) continue;
       i = y + dy[k % 8];
       if (!(i >= 0 && i < h)) continue;
-      if (bitmap_isset(j, i, image)) {
+      if (bitmap_isset(image, j, i)) {
 	// find sweeping pixel
 	found = 1;
 	break;
@@ -268,14 +268,14 @@ int dwordmap_delete_shell(dwordmap_t *pixmap, long label, int depth)
     if (dwordmap_create_chaincode(chain, pixmap, label) < 0) break;
     x = ((point_t *)chain->spare)->x;
     y = ((point_t *)chain->spare)->y;
-    dwordmap_put_value(-1, x, y, pixmap);
+    dwordmap_put_value(-1, pixmap, x, y);
     //DWORDMAP_PUT(-1, pixmap, x, y);
     for (a = chain->tail->next; a->next != chain->head; a = a->next) {
       //for (j = 0; j < chain->n-1; j++) {
       n = (int)a->object;
       x += dx[n];
       y += dy[n];
-      dwordmap_put_value(-1, x, y, pixmap);
+      dwordmap_put_value(-1, pixmap, x, y);
       //DWORDMAP_PUT(-1, pixmap, x, y);
     }
     chaincode_destroy(chain);
@@ -302,7 +302,7 @@ int bitmap_delete_shell(bitmap_t *pixmap, int depth)
     y = ((point_t *)chain->spare)->y;
     //x = chain->x;
     //y = chain->y;
-    bitmap_reset_value(x, y, pixmap);
+    bitmap_reset_value(pixmap, x, y);
     //BITMAP_RESET(pixmap, x, y);
     //printf("delete start point\n");
     //DWORDMAP_PUT(-1, pixmap, x, y);
@@ -311,7 +311,7 @@ int bitmap_delete_shell(bitmap_t *pixmap, int depth)
       n = (int)a->object;
       x += dx[n];
       y += dy[n];
-      bitmap_reset_value(x, y, pixmap);
+      bitmap_reset_value(pixmap, x, y);
       //BITMAP_RESET(pixmap, x, y);
       //printf("delete shell\n");
       //DWORDMAP_PUT(-1, pixmap, x, y);

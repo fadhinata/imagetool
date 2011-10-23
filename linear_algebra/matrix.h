@@ -18,9 +18,8 @@
 #define __MATRIX_H__
 
 #include <common.h>
-#include <complex2.h>
-#include <vector.h>
-#include <bitmap.h>
+#include <linear_algebra/complex2.h>
+#include <linear_algebra/vector.h>
 
 #undef USE_INVERSE_BY_GAUSS_JORDAN_ELIMINATE
 
@@ -48,27 +47,27 @@ extern "C" {
 #define matrix_get_buffer(m) ((m)->real)
 #define imatrix_get_buffer(m) ((m)->imaginary)
 
-#define matrix_get_value(c, r, m) *((m)->real + (r) * (m)->columns + (c))
-#define imatrix_get_value(c, r, m) *((m)->imaginary + (r) * (m)->columns + (c))
-#define cmatrix_read_value(v, c, r, m) ((v)->real = *((m)->real + (r) * (m)->columns + (c)), (v)->imag = (m)->imaginary ? *((m)->imaginary + (r) * (m)->columns + (c)) : 0)
+#define matrix_get_value(m, c, r) *((m)->real + (r) * (m)->columns + (c))
+#define imatrix_get_value(m, c, r) *((m)->imaginary + (r) * (m)->columns + (c))
+#define cmatrix_read_value(v, m, c, r) ((v)->real = *((m)->real + (r) * (m)->columns + (c)), (v)->imag = (m)->imaginary ? *((m)->imaginary + (r) * (m)->columns + (c)) : 0)
 
-#define matrix_put_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) = v)
-#define imatrix_put_value(v, c, r, m) (*((m)->imaginary + (r) * (m)->columns + (c)) = v)
-#define cmatrix_put_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) = (v).real, *((m)->imaginary + (r) * (m)->columns + (c)) = (v).imag)
+#define matrix_put_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) = v)
+#define imatrix_put_value(v, m, c, r) (*((m)->imaginary + (r) * (m)->columns + (c)) = v)
+#define cmatrix_put_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) = (v).real, *((m)->imaginary + (r) * (m)->columns + (c)) = (v).imag)
 
-#define matrix_add_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) += v)
-#define imatrix_add_value(v, c, r, m) (*((m)->imaginary + (r) * (m)->columns + (c)) += v)
-#define cmatrix_add_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) += (v).real, *((m)->imaginary + (r) * (m)->columns + (c)) += (v).imag)
+#define matrix_add_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) += v)
+#define imatrix_add_value(v, m, c, r) (*((m)->imaginary + (r) * (m)->columns + (c)) += v)
+#define cmatrix_add_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) += (v).real, *((m)->imaginary + (r) * (m)->columns + (c)) += (v).imag)
 
-#define matrix_sub_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) -= v)
-#define imatrix_sub_value(v, c, r, m) (*((m)->imaginary + (r) * (m)->columns + (c)) -= v)
-#define cmatrix_sub_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) -= (v).real, *((m)->imaginary + (r) * (m)->columns + (c)) -= (v).imag)
+#define matrix_sub_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) -= v)
+#define imatrix_sub_value(v, m, c, r) (*((m)->imaginary + (r) * (m)->columns + (c)) -= v)
+#define cmatrix_sub_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) -= (v).real, *((m)->imaginary + (r) * (m)->columns + (c)) -= (v).imag)
 
-#define matrix_div_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) /= v)
-#define imatrix_div_value(v, c, r, m) (*((m)->imaginary + (r) * (m)->columns + (c)) /= v)
+#define matrix_div_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) /= v)
+#define imatrix_div_value(v, m, c, r) (*((m)->imaginary + (r) * (m)->columns + (c)) /= v)
 
-#define matrix_mul_value(v, c, r, m) (*((m)->real + (r) * (m)->columns + (c)) *= v)
-#define imatrix_mul_value(v, c, r, m) (*((m)->imaginary + (r) * (m)->columns + (c)) *= v)
+#define matrix_mul_value(v, m, c, r) (*((m)->real + (r) * (m)->columns + (c)) *= v)
+#define imatrix_mul_value(v, m, c, r) (*((m)->imaginary + (r) * (m)->columns + (c)) *= v)
 
   // matrix allocation and de-allocation
   matrix_t *matrix_new(int columns, int rows, bool complex_or_not);
@@ -87,6 +86,9 @@ extern "C" {
   void matrix_bezero(matrix_t *m, int c, int r, int dc, int dr);
   void imatrix_bezero(matrix_t *m, int c, int r, int dc, int dr);
   void cmatrix_bezero(matrix_t *m, int c, int r, int dc, int dr);
+#define matrix_clear(m) matrix_bezero(m, 0, 0, m->columns, m->rows)
+#define imatrix_clear(m) imatrix_bezero(m, 0, 0, m->columns, m->rows)
+#define cmatrix_clear(m) cmatrix_bezero(m, 0, 0, m->columns, m->rows)
 
   // matrix set
   void matrix_fill(matrix_t *m, int c, int r, int dc, int dr, real_t value);

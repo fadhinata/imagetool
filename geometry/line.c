@@ -21,8 +21,8 @@
 #include <string.h>
 
 #include <common.h>
-#include <line.h>
-#include <point.h>
+#include <geometry/line.h>
+#include <geometry/point.h>
 
 line_t *line_new(void)
 {

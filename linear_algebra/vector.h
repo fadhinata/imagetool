@@ -18,7 +18,7 @@
 #define __VECTOR_H__
 
 #include <common.h>
-#include <complex2.h>
+#include <linear_algebra/complex2.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,7 +26,7 @@ extern "C" {
 
   typedef struct {
     int reference;
-    int length;
+    int dimension;
     real_t *real;
     real_t *imaginary;
   } vector_t;
@@ -36,34 +36,39 @@ extern "C" {
 #define vector_dec_ref(v) ((v)->reference--)
 
 #define vector_is_imaginary(v) ((v)->imaginary != NULL)
-#define vector_get_length(vec) ((vec)->length)
-#define vector_get_value(i, vec) (*((vec)->real + i))
-#define ivector_get_value(i, vec) (*((vec)->imaginary + i))
-#define cvector_read_value(c, i, v) ((c)->real = *((v)->real + i), (c)->imag = *((v)->imaginary + i))
-#define vector_put_value(v, i, vec) (*((vec)->real + i) = v)
-#define ivector_put_value(v, i, vec) (*((vec)->imaginary + i) = v)
-#define cvector_put_value(c, i, v) (*((v)->real + i) = c.real, *((v)->imaginary + i) = c.imag)
+#define vector_get_dimension(vec) ((vec)->dimension)
 #define vector_get_buffer(v) ((v)->real)
 #define ivector_get_buffer(v) ((v)->imaginary)
 
-#define VECTOR_LENGTH(v) ((v)->length)
-#define VECTOR_GET(v, vec, idx) (v = *((vec)->real+idx))
-#define IVECTOR_GET(v, vec, idx) (v = *((vec)->imaginary+idx))
-#define CVECTOR_GET(v, vec, idx) (v.real = *((vec)->real+idx), v.imag = (vec)->imaginary != NULL ? *((vec)->imaginary+idx) : 0.0)
-#define VECTOR_PUT(v, vec, idx) (*((vec)->real+idx) = v)
-#define IVECTOR_PUT(v, vec, idx) (*((vec)->imaginary+idx) = v)
-#define CVECTOR_PUT(v, vec, idx) { *((vec)->real+idx) = v.real; if ((vec)->imaginary != NULL) ? *((vec)->imaginary+idx) = v.imag; }
+#define vector_get_value(vec, i) (*((vec)->real + i))
+#define ivector_get_value(vec, i) (*((vec)->imaginary + i))
+#define cvector_read_value(c, v, i) ((c)->real = *((v)->real + i), (c)->imag = *((v)->imaginary + i))
+#define vector_put_value(v, vec, i) (*((vec)->real + i) = v)
+#define ivector_put_value(v, vec, i) (*((vec)->imaginary + i) = v)
+#define cvector_put_value(c, v, i) (*((v)->real + i) = c.real, *((v)->imaginary + i) = c.imag)
+#define vector_add_value(v, vec, i) (*((vec)->real + i) += v)
+#define ivector_add_value(v, vec, i) (*((vec)->imaginary + i) += v)
+#define cvector_add_value(v, vec, i) (*((vec)->real + i) += v.real, *((vec)->imaginary + i) += v.imag)
+#define vector_sub_value(v, vec, i) (*((vec)->real + i) -= v)
+#define ivector_sub_value(v, vec, i) (*((vec)->imaginary + i) -= v)
+#define cvector_sub_value(v, vec, i) (*((vec)->real + i) -= v.real, *((vec)->imaginary + i) -= v.imag)
+#define vector_mul_value(v, vec, i) (*((vec)->real + i) *= v)
+#define ivector_mul_value(v, vec, i) (*((vec)->imaginary + i) *= v)
+#define vector_div_value(v, vec, i) (*((vec)->real + i) += v)
+#define ivector_div_value(v, vec, i) (*((vec)->imaginary + i) += v)
 
   vector_t *vector_new(int n, bool complex_or_not);
 #define vector_attach_imaginary(v) {					\
     if ((v)->imaginary == NULL) {					\
-      (v)->imaginary = (real_t *)malloc((v)->length * sizeof(real_t)); \
+      (v)->imaginary = (real_t *)malloc((v)->dimension * sizeof(real_t)); \
       assert((v)->imaginary);						\
-      memset((v)->imaginary, 0, (v)->length * sizeof(real_t)); \
+      memset((v)->imaginary, 0, (v)->dimension * sizeof(real_t)); \
     }									\
   }
   void vector_destroy(vector_t *vec);
-  void vector_copy(vector_t *copyer, vector_t *copee);
+  vector_t *vector_copy(vector_t *copyer, vector_t *copee);
+  vector_t *ivector_copy(vector_t *copyer, vector_t *copee);
+  vector_t *cvector_copy(vector_t *copyer, vector_t *copee);
   vector_t *vector_new_and_copy(vector_t *vec);
   
   //vector_t *vector_create(int n, int complex);
@@ -79,6 +84,12 @@ extern "C" {
   void vector_bezero(vector_t *p, int start, int len);
   void ivector_bezero(vector_t *p, int start, int len);
   void cvector_bezero(vector_t *p, int start, int len);
+#define vector_clear(v) memset((v)->real, 0, (v)->dimension * sizeof(real_t))
+#define ivector_clear(v) memset((v)->imaginary, 0, (v)->dimension * sizeof(real_t))
+#define cvector_clear(v) {					\
+    memset((v)->real, 0, (v)->dimension * sizeof(real_t));	\
+    memset((v)->imaginary, 0, (v)->dimension * sizeof(real_t));	\
+  }
   void vector_fill(vector_t *p, int index, int len, real_t v);
   void ivector_fill(vector_t *p, int index, int len, real_t v);
   void cvector_fill(vector_t *p, int index, int len, complex_t v);

@@ -30,9 +30,9 @@
 #include <assert.h>
 
 #include <common.h>
-#include <bitmap.h>
-#include <bytemap.h>
-#include <neighbor.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/bytemap.h>
+#include <geometry/neighbor.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -18,7 +18,7 @@
 #define __LINE_LIST_H__
 
 #include <common.h>
-#include <dlink.h>
+#include <buffering/dlink.h>
 
 #ifdef __cplusplus
 extern "C" {

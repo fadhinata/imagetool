@@ -18,10 +18,17 @@
 #ifndef __BYTEMAP_H__
 #define __BYTEMAP_H__
 
+#ifdef _MSC_VER
+#include <limits.h>
+typedef unsigned __int8 uint8_t;
+typedef __int8 int8_t;
+#define UINT8_MAX UCHAR_MAX
+#else
 #include <stdint.h>
+#endif
 
-#include <maphdr.h>
-#include <bitmap.h>
+#include <pixmap/maphdr.h>
+#include <pixmap/bitmap.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,8 +44,8 @@ extern "C" {
 #define bytemap_get_height(m) ((m)->header.height)
 #define bytemap_get_pitch(m) ((m)->header.pitch)
 #define bytemap_get_buffer(m) ((m)->buffer)
-#define bytemap_get_value(x, y, m) (*((m)->buffer + (y) * (m)->header.pitch + (x)))
-#define bytemap_put_value(v, x, y, m) (*((m)->buffer + (y) * (m)->header.pitch + (x))) = (v)
+#define bytemap_get_value(m, x, y) (*((m)->buffer + (y) * (m)->header.pitch + (x)))
+#define bytemap_put_value(v, m, x, y) (*((m)->buffer + (y) * (m)->header.pitch + (x))) = (v)
   bytemap_t *bytemap_new(int w, int h);
 #define bytemap_destroy(m) { assert(m); free(m); }
 #define bytemap_clone(m) bytemap_new(bytemap_get_width(m), bytemap_get_height(m))

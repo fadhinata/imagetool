@@ -21,11 +21,11 @@
 #include <assert.h>
 
 #include <common.h>
-#include <vector.h>
-#include <matrix.h>
-#include <bitmap.h>
-#include <dwordmap.h>
-#include <convert.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/matrix.h>
+#include <pixmap/bitmap.h>
+#include <pixmap/dwordmap.h>
+#include <convert/convert.h>
 
 #define INF 1E20
 
@@ -40,9 +40,9 @@ void vector_distance_transform(vector_t *dist, vector_t *vec, int n)
 
   assert(dist);
   assert(vec);
-  assert(vector_get_length(dist) >= vector_get_length(vec));
+  assert(vector_get_dimension(dist) >= vector_get_dimension(vec));
 
-  if (n <= 0) n = vector_get_length(vec);
+  if (n <= 0) n = vector_get_dimension(vec);
 
   xvertex = (int *)calloc(n, sizeof(*xvertex));
   assert(xvertex);
@@ -65,14 +65,14 @@ void vector_distance_transform(vector_t *dist, vector_t *vec, int n)
     //
     // Find the maximum of x of common point in two parabolas
     p = xvertex[k];
-    x = (((sqr(q) + vector_get_value(q, vec)) -
-	  (sqr(p) + vector_get_value(p, vec))) /
+    x = (((sqr(q) + vector_get_value(vec, q)) -
+	  (sqr(p) + vector_get_value(vec, p))) /
 	 (2 * q - 2 * p));
     while (x <= xmaxhit[k]) {
       k--;
       p = xvertex[k];
-      x = (((sqr(q) + vector_get_value(q, vec)) -
-	    (sqr(p) + vector_get_value(p, vec))) /
+      x = (((sqr(q) + vector_get_value(vec, q)) -
+	    (sqr(p) + vector_get_value(vec, p))) /
 	   (2 * q - 2 * p));
     }
     k++;
@@ -85,7 +85,7 @@ void vector_distance_transform(vector_t *dist, vector_t *vec, int n)
   for (q = 0; q < n; q++) {
     while (xmaxhit[k+1] < q) k++;
     p = xvertex[k];
-    vector_put_value(sqr(q-p) + vector_get_value(p, vec), q, dist);
+    vector_put_value(sqr(q-p) + vector_get_value(vec, p), dist, q);
   }
 
   free(xvertex);

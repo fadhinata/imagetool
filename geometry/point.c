@@ -5,7 +5,11 @@
 #include <assert.h>
 
 #include <common.h>
-#include <point.h>
+#include <geometry/point.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 real_t arctan2r(real_t dy, real_t dx)
 {

@@ -17,7 +17,7 @@
 #ifndef __GAUSS_H__
 #define __GAUSS_H__
 
-#include <matrix.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {

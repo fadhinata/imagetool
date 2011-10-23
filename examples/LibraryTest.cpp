@@ -198,15 +198,17 @@ int test_library(int argc, char *argv[])
   int imax, jmax;
   double r, t, aa, bb, cc;
 
+  printf("hough circle\n");
   hough_circle = hough_circle_new(0, 0, 100, 0, 0, 100, 0, 0, 100);
   hough_circle_accumulate(hough_circle, bin);
   hough_circle_get_sorted_index(&jmax, &imax, &kmax, 1, hough_circle);
   hough_circle_get_arguments(&xorg, &yorg, &r, bitmap_get_width(bin)/2.0, bitmap_get_height(bin)/2.0, jmax, imax, kmax, hough_circle);
   hough_circle_destroy(hough_circle);
+
   bitmap_draw_circle((int)round(xorg), (int)round(yorg), (int)round(r), 1, bin);
-  write_bitmap_to_screen(bin, NULL, NULL);
+  write_bitmap_to_screen(bin, bin, bin);
   wait_keyhit();
-	
+
 	printf("hough line\n");
 	hough_line = hough_line_create(0, 0, 100, 0, 0, 100);
 	bytemap_threshold(d, c, 100, 255);

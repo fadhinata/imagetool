@@ -17,17 +17,17 @@
 #ifndef __HAAR_H__
 #define __HAAR_H__
 
-#include <vector.h>
-#include <matrix.h>
+#include <linear_algebra/vector.h>
+#include <linear_algebra/matrix.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int hfwt(vector_t *q, vector_t *p);
-int ihfwt(vector_t *q, vector_t *p);
-int hfwt2(matrix_t *q, matrix_t *p);
-int ihfwt2(matrix_t *q, matrix_t *p);
+  void haar_fwt(vector_t *q, vector_t *p);
+  void haar_ifwt(vector_t *q, vector_t *p);
+  void haar_fwt2(matrix_t *q, matrix_t *p);
+  void haar_ifwt2(matrix_t *q, matrix_t *p);
 
 #ifdef __cplusplus
 }

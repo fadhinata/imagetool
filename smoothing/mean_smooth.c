@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include <common.h>
-#include <mean_smooth.h>
+#include <smoothing/mean_smooth.h>
 
 void mean_smooth(bytemap_t *q, bytemap_t *p, int bsize)
 {

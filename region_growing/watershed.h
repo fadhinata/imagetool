@@ -26,17 +26,17 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <matrix.h>
-#include <vector.h>
-#include <neighbor.h>
-#include <dlink.h>
+#include <linear_algebra/matrix.h>
+#include <linear_algebra/vector.h>
+#include <geometry/neighbor.h>
+#include <buffering/dlink.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  int bytemap_create_watershed(dwordmap_t *label_map, dlist_t *info, bytemap_t *image, neighbor_t *type);
-  int wordmap_create_watershed(dwordmap_t *label_map, dlist_t *info, wordmap_t *image, neighbor_t *type);
+  int bytemap_create_watershed(dwordmap_t *label_map, dlist_t *info, bytemap_t *image, neighbor_t type);
+  int wordmap_create_watershed(dwordmap_t *label_map, dlist_t *info, wordmap_t *image, neighbor_t type);
 
 #ifdef __cplusplus
 }

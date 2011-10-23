@@ -17,8 +17,8 @@
 #ifndef __THIN_H__
 #define __THIN_H__
 
-#include <bitmap.h>
-#include <dlink.h>
+#include <pixmap/bitmap.h>
+#include <buffering/dlink.h>
 
 #ifdef __cplusplus
 extern "C" {
