@@ -52,7 +52,9 @@ extern "C" {
   __inline real_t complex_abs(complex_t *q);
   __inline int complex_compare_abs(complex_t *q, complex_t *p);
   __inline int complex_compare(complex_t *q, complex_t *p);
+  __inline complex_t *complex_conjugate(complex_t *q, complex_t *p);
 
+  
 #ifdef __cplusplus
 }
 #endif 

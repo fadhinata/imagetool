@@ -43,7 +43,7 @@ extern "C" {
   void triangle_list_put(triangle_t *tri, int i, triangle_list_t *list);
 #define triangle_list_exchange(i, j, list) dlist_exchange(i, j, (dlist_t *)(list))
   int triangle_list_query(triangle_t *tri, triangle_list_t *list);
-  void triangle_list_delete(triangle_list_t *list);
+  void triangle_list_isolate(triangle_list_t *list);
   void triangle_list_destroy(triangle_list_t *list);
 
 #ifdef __cplusplus

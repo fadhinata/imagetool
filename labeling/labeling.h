@@ -29,25 +29,19 @@
 extern "C" {
 #endif
 
+#define UNLABEL (-1)
+
   typedef dlist_t label_info_t;
 
 #define label_info_new() (label_info_t *)dlist_new()
 #define label_info_get_count(x) ((x)->count)
-  void label_info_insert(point_t *p, int pixels, label_info_t *labelinfo);
-  point_t *label_info_pop(int *pixels, label_info_t *labelinfo);
   point_t *label_info_glimpse(int *pixels,int i, label_info_t *label_info);
+  void label_info_clear(label_info_t *labelinfo);
   void label_info_destroy(label_info_t *labelinfo);
-
   int labeling(dwordmap_t *labelmap, label_info_t *labelinfo, bitmap_t *bin, neighbor_t type);
-  int label_grep_largest_blob(bitmap_t *q, bitmap_t *p);
-  int labetl_get_sort_by_area(int *label, int len, label_info_t *labelinfo);
-
-  /*
-  int labeling(dwordmap_t *labelmap, matrix_t *centroid, vector_t *area, bitmap_t *bin, neighbor_t type);
-  int label_pickup_by_largest_area(bitmap_t *q, bitmap_t *p);
-  int label_sort_by_area(int *labels, int n, vector_t *areas);
-  void label_fill_holes(bitmap_t *q, bitmap_t *p);
-  */
+  int labeling_grep_big_blob(bitmap_t *q, bitmap_t *p);
+  int labeling_read_area_sort(int *label, int len, label_info_t *labelinfo);
+  void labeling_fill_holes(bitmap_t *q, bitmap_t *p);
 
 #ifdef __cplusplus
 }

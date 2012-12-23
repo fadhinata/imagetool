@@ -28,7 +28,7 @@ extern "C" {
 
 #define point_list_inc_ref(p) ((p)->reference++)
 #define point_list_dec_ref(p) ((p)->reference--)
-#define point_list_get_ref(p) ((p)->reference)
+#define point_list_get_ref(p) ((p)->reference = (p)->reference > 0 ? (p)->reference-1 : (p)->reference)
 #define point_list_inc_count(p) ((p)->count++)
 #define point_list_dec_count(p) ((p)->count--)
 #define point_list_get_count(p) ((p)->count)
@@ -43,7 +43,8 @@ extern "C" {
   point_t *point_list_pick(int i, point_list_t *list);
   void point_list_put(point_t *p, int i, point_list_t *list);
   int point_list_query(point_t *p, point_list_t *list);
-  void point_list_delete(point_list_t *list);
+  //  vpod point_list_shakeoff(point_list_t *list);
+  void point_list_clear(point_list_t *list);
   void point_list_destroy(point_list_t *list);
 
 #ifdef __cplusplus

@@ -82,6 +82,8 @@ void dlink_exchange(dlink_t *a, dlink_t *b)
   assert(a);
   assert(b);
 
+  if (a == b) return;
+
   dummy = dlink_new();
 
   dlink_substitute(dummy, a);
@@ -229,7 +231,7 @@ void dlist_destroy(dlist_t *list)
 
   assert(list);
 
-  if (list->reference == 0) {
+  if (list->reference <= 0) {
     while (list->count > 0) {
       link = dlist_extract(list);
       dlink_destroy(link);

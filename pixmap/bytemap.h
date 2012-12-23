@@ -30,14 +30,14 @@ typedef __int8 int8_t;
 #include <pixmap/maphdr.h>
 #include <pixmap/bitmap.h>
 
+typedef struct {
+  maphdr_t header;
+  uint8_t *buffer;
+} bytemap_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-  typedef struct {
-    maphdr_t header;
-    uint8_t *buffer;
-  } bytemap_t;
 
 #define bytemap_isrange(x, y, p) (((x) >= 0 && (x) < (p)->header.width) && ((y) >= 0 && (y) < (p)->header.height))
 #define bytemap_get_width(m) ((m)->header.width)

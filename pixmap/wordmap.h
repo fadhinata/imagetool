@@ -24,9 +24,6 @@ typedef unsigned __int16 uint16_t;
 #include <stdint.h>
 #endif
 
-#include <string.h>
-#include <malloc.h>
-
 #include <pixmap/maphdr.h>
 #include <pixmap/bitmap.h>
 

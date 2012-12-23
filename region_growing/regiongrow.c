@@ -18,6 +18,7 @@
 // Reference by 
 // region growing: A New Approach - S. A. Hojjatoleslami and J. Kittler */
 #include <string.h>
+#include <malloc.h>
 
 #include <common.h>
 #include <pixmap/dwordmap.h>

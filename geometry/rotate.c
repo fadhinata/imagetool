@@ -34,7 +34,7 @@ static const double MAX_2_SHEAR_ANGLE = 0.05;  /* radians; ~3 degrees    */
 #define PIXMAP_ROTATE90(pixmap, q, qxorg, qyorg, p, pxorg, pyorg) {	\
     int i, j, w, h;							\
     int l, r, t, b;							\
-    int dl, dr, dt, db;							\
+    int dl, dt;								\
 									\
     assert(q);								\
     assert(qxorg >= 0 && qxorg < pixmap##_get_width(q));		\
@@ -56,10 +56,7 @@ static const double MAX_2_SHEAR_ANGLE = 0.05;  /* radians; ~3 degrees    */
     }									\
 									\
     if (r >= pixmap##_get_width(q)) {					\
-      dr = r - pixmap##_get_width(q);					\
       r = pixmap##_get_width(q) - 1;					\
-    } else {								\
-      dr = 0;								\
     }									\
 									\
     if (t < 0) {							\
@@ -70,10 +67,7 @@ static const double MAX_2_SHEAR_ANGLE = 0.05;  /* radians; ~3 degrees    */
     }									\
 									\
     if (b >= pixmap##_get_height(q)) {					\
-      db = b - pixmap##_get_height(q);					\
       b = pixmap##_get_height(q) - 1;					\
-    } else {								\
-      db = 0;								\
     }									\
 									\
     w = r - l + 1;							\
@@ -108,7 +102,7 @@ void dwordmap_rotate90(dwordmap_t *q, int qxorg, int qyorg, dwordmap_t *p, int p
 #define PIXMAP_ROTATE180(pixmap, q, qxorg, qyorg, p, pxorg, pyorg) {	\
     int i, j, w, h;							\
     int l, r, t, b;							\
-    int dl, dr, dt, db;							\
+    int dl, dt;								\
 									\
     assert(q);								\
     assert(qxorg >= 0 && qxorg < pixmap##_get_width(q));		\
@@ -130,10 +124,7 @@ void dwordmap_rotate90(dwordmap_t *q, int qxorg, int qyorg, dwordmap_t *p, int p
     }									\
 									\
     if (r >= pixmap##_get_width(q)) {					\
-      dr = r - pixmap##_get_width(q);					\
       r = pixmap##_get_width(q) - 1;					\
-    } else {								\
-      dr = 0;								\
     }									\
 									\
     if (t < 0) {							\
@@ -144,10 +135,7 @@ void dwordmap_rotate90(dwordmap_t *q, int qxorg, int qyorg, dwordmap_t *p, int p
     }									\
 									\
     if (b >= pixmap##_get_height(q)) {					\
-      db = b - pixmap##_get_height(q);					\
       b = pixmap##_get_height(q) - 1;					\
-    } else {								\
-      db = 0;								\
     }									\
 									\
     w = r - l + 1;							\

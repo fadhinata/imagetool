@@ -568,6 +568,35 @@ void bitmap2bytemap(bytemap_t *q, bitmap_t *p)
   }
 }
 
+void dynamic_bitmap2bytemap(bytemap_t *q, bitmap_t *p)
+{
+  int i, j, w, h;
+  uint8_t *qbuf, *pbuf;
+  int qpitch, ppitch;
+
+  assert(q);
+  assert(p);
+  assert(bytemap_get_width(q) == bitmap_get_width(p));
+  assert(bytemap_get_height(q) == bitmap_get_height(p));
+
+  w = bytemap_get_width(q);
+  h = bytemap_get_height(q);
+
+  qbuf = bytemap_get_buffer(q);
+  qpitch = bytemap_get_pitch(q) / sizeof(*qbuf);
+
+  pbuf = bitmap_get_buffer(p);
+  ppitch = bytemap_get_pitch(p) / sizeof(*pbuf);
+
+  for (i = 0; i < h; i++) {
+    for (j = 0; j < w; j++) {
+      *(qbuf + j) = ((*(pbuf + (j >> 3))) >> (j % 8)) & 1 ? 255 : 0;
+    }
+    qbuf += qpitch;
+    pbuf += ppitch;
+  }
+}
+
 void bytemap2bitmap(bitmap_t *q, bytemap_t *p)
 {
   int i, j, w, h;

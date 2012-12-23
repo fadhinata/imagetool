@@ -22,6 +22,25 @@
 #include <linear_algebra/gram_schmidt.h>
 #include <linear_algebra/vector_list.h>
 
+void matrix_qr_decomposite(matrix_t *q, matrix_t *r, matrix_t *m)
+{
+  int n;
+  matrix_t *qt;
+
+  assert(q);
+  assert(r);
+  assert(m);
+  assert(matrix_is_square(m));
+  assert(matrix_are_matched(m, r));
+  assert(matrix_are_matched(m, q));
+
+  matrix_gram_schmidt_process(q, m);
+  qt = matrix_new_and_copy_matrix_transpose(q); // or inverse matrix
+  matrix_copy_matrix_multiply_matrix(r, qt, m);
+
+  matrix_destroy(qt);
+}
+
 void matrix_new_and_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p)
 {
   int n;

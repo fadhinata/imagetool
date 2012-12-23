@@ -261,28 +261,28 @@ void cvector_fill(vector_t *p, int start, int len, complex_t v)
   }
 }
 
-#define VECTOR_RANDOMLY_FILL(pbuf, plen) {			\
+#define VECTOR_FILL_RANDOMLY(pbuf, plen) {			\
     int i;							\
     assert(pbuf);						\
     for (i = 0; i < plen; i++) *(pbuf + i) = rand()/1000.0;	\
   }
 
-void vector_randomly_fill(vector_t *p)
+void vector_fill_randomly(vector_t *p)
 {
-  VECTOR_RANDOMLY_FILL(vector_get_buffer(p), vector_get_dimension(p));
+  VECTOR_FILL_RANDOMLY(vector_get_buffer(p), vector_get_dimension(p));
 }
 
-void ivector_randomly_fill(vector_t *p)
+void ivector_fill_randomly(vector_t *p)
 {
-  VECTOR_RANDOMLY_FILL(ivector_get_buffer(p), vector_get_dimension(p));
+  VECTOR_FILL_RANDOMLY(ivector_get_buffer(p), vector_get_dimension(p));
 }
 
-void cvector_randomly_fill(vector_t *p)
+void cvector_fill_randomly(vector_t *p)
 {
   assert(p);
 
-  vector_randomly_fill(p);
-  if (ivector_get_buffer(p) != NULL) ivector_randomly_fill(p);
+  vector_fill_randomly(p);
+  if (ivector_get_buffer(p) != NULL) ivector_fill_randomly(p);
 }
 
 #define VECTOR_COPY(qbuf, qlen, qi, pbuf, plen, pi, n) {	\
@@ -2144,7 +2144,7 @@ vector_t *cvector_multiply_cvector(vector_t *c, vector_t *b)
     assert(alen == blen);					\
     *c = 0.0;							\
     for (i = 0; i < alen; i++)					\
-      *c += (*(abuf+i))*(*(bbuf+i));				\
+      *c += (*(abuf + i)) * (*(bbuf + i));			\
   }
 
 real_t vector_dotproduct_vector(real_t *c, vector_t *a, vector_t *b)
@@ -2186,23 +2186,24 @@ complex_t cvector_dotproduct_cvector(complex_t *c, vector_t *a, vector_t *b)
 
   // for real part
   vector_dotproduct_vector(&c->real, a, b);
-  if (ivector_get_buffer(a) && ivector_get_buffer(b)) {
+  if (vector_is_imaginary(a) && vector_is_imaginary(b)) {
     ivector_dotproduct_ivector(&tmp, a, b);
     c->real -= tmp;
   }
 
   // imaginary part
   c->imag = 0.0;
-  if ((ivector_get_buffer(a) != NULL) || (ivector_get_buffer(b) != NULL)) {
-    if (ivector_get_buffer(a) != NULL) {
+  if (vector_is_imaginary(a) || vector_is_imaginary(b)) {
+    if (vector_is_imaginary(a)) {
       ivector_dotproduct_vector(&tmp, a, b);
       c->imag += tmp;
     }
-    if (ivector_get_buffer(b) != NULL) {
+    if (vector_is_imaginary(b)) {
       vector_dotproduct_ivector(&tmp, a, b);
-      c->imag += tmp;
+      c->imag -= tmp;
     }
   }
+
   return *c;
 }
 

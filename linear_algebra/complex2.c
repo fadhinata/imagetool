@@ -221,5 +221,17 @@ __inline int complex_compare(complex_t *q, complex_t *p)
 
   if (!(abs(q->real - p->real) < REAL_EPSILON)) return -1;
   if (!(abs(q->imag - p->imag) < REAL_EPSILON)) return -1;
+
   return 0;
+}
+
+__inline complex_t *complex_conjugate(complex_t *q, complex_t *p)
+{
+  assert(q);
+  assert(p);
+
+  q->real = p->real;
+  q->imag = -p->imag;
+
+  return q;
 }

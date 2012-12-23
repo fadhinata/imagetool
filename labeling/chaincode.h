@@ -31,13 +31,13 @@ extern "C" {
 
 #define chaincode_new() (chaincode_t *)dlist_new()
   void chaincode_destroy(chaincode_t *chain);
-  int dwordmap_create_chaincode(chaincode_t *chain, dwordmap_t *image, long label);
-  int bitmap_create_chaincode(chaincode_t *chain, bitmap_t *image);
-  real_t chaincode_get_perimeter(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen);
-  real_t chaincode_get_area(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen);
+  int chaincoding_on_dwordmap(chaincode_t *chain, dwordmap_t *image, long label);
+  int chaincoding_on_bitmap(chaincode_t *chain, bitmap_t *image);
+  real_t chaincode_compute_perimeter(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen);
+  real_t chaincode_compute_area(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen);
   int chaincode_create_point_list(point_list_t *list, chaincode_t *chain);
-  int dwordmap_delete_shell(dwordmap_t *pixmap, long label, int depth);
-  int bitmap_delete_shell(bitmap_t *pixmap, int depth);
+  int dwordmap_strip_shell(dwordmap_t *pixmap, long label, int depth);
+  int bitmap_strip_shell(bitmap_t *pixmap, int depth);
 
 #ifdef __cplusplus
 }

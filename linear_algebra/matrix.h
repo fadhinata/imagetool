@@ -72,6 +72,7 @@ extern "C" {
   // matrix allocation and de-allocation
   matrix_t *matrix_new(int columns, int rows, bool complex_or_not);
   matrix_t *matrix_new_and_copy(matrix_t *m);
+
 #define matrix_attach_imaginary(m) {					\
     if ((m)->imaginary == NULL) {					\
       (m)->imaginary = (real_t *)malloc((m)->columns * (m)->rows * sizeof(real_t)); \
@@ -79,8 +80,34 @@ extern "C" {
       memset((m)->imaginary, 0, (m)->columns * (m)->rows * sizeof(real_t)); \
     }									\
   }
+
   void matrix_destroy(matrix_t *m);
   void matrix_dump(matrix_t *m);
+
+  // matrix is zero ?
+  bool matrix_is_zero(matrix_t *m, int c, int r, int dc, int dr);
+  bool imatrix_is_zero(matrix_t *m, int c, int r, int dc, int dr);
+  bool cmatrix_is_zero(matrix_t *m, int c, int r, int dc, int dr);
+
+  bool matrix_is_symmetric(matrix_t *m);
+  bool imatrix_is_symmetric(matrix_t *m);
+  bool cmatrix_is_symmetric(matrix_t *m);
+
+  bool matrix_is_skew_symmetric(matrix_t *m);
+  bool imatrix_is_skew_symmetric(matrix_t *m);
+  bool cmatrix_is_skew_symmetric(matrix_t *m);
+
+  bool matrix_is_diagonal(matrix_t *m);
+  bool imatrix_is_diagonal(matrix_t *m);
+  bool cmatrix_is_diagonal(matrix_t *m);
+
+  bool matrix_is_identity(matrix_t *m);
+  bool imatrix_is_identity(matrix_t *m);
+  bool cmatrix_is_identity(matrix_t *m);
+
+  bool matrix_is_orthogonal(matrix_t *m);
+  bool imatrix_is_orthogonal(matrix_t *m);
+  bool cmatrix_is_orthogonal(matrix_t *m);
 
   // matrix clear
   void matrix_bezero(matrix_t *m, int c, int r, int dc, int dr);
@@ -94,9 +121,9 @@ extern "C" {
   void matrix_fill(matrix_t *m, int c, int r, int dc, int dr, real_t value);
   void imatrix_fill(matrix_t *m, int c, int r, int dc, int dr, real_t value);
   void cmatrix_fill(matrix_t *m, int c, int r, int dc, int dr, complex_t value);
-  void matrix_randomly_fill(matrix_t *m);
-  void imatrix_randomly_fill(matrix_t *m);
-  void cmatrix_randomly_fill(matrix_t *m);
+  void matrix_fill_randomly(matrix_t *m);
+  void imatrix_fill_randomly(matrix_t *m);
+  void cmatrix_fill_randomly(matrix_t *m);
 
   // trimming matrix
   void matrix_trim(matrix_t *m, real_t bottom, real_t top);
@@ -115,8 +142,20 @@ extern "C" {
   int cmatrix_compare_cmatrix(matrix_t *q, matrix_t *p);
 #define matrix_compare(q, p) matrix_compare_matrix(q, p)
 #define matrix_cmp(q, p) matrix_compare_matrix(q, p)
+#define imatrix_cmp(q, p) imatrix_compare_imatrix(q, p)
+#define imatrix_compare(q, p) imatrix_compare_imatrix(q, p)
 #define cmatrix_compare(q, p) cmatrix_compare_cmatrix(q, p)
 #define cmatrix_cmp(q, p) cmatrix_compare_cmatrix(q, p)
+
+  // exchange row
+  void matrix_exchange_row(int i, int j, matrix_t *m);
+  void imatrix_exchange_row(int i, int j, matrix_t *m);
+  void cmatrix_exchange_row(int i, int j, matrix_t *m);
+
+  // exchange column
+  void matrix_exchange_column(int i, int j, matrix_t *m);
+  void imatrix_exchange_column(int i, int j, matrix_t *m);
+  void cmatrix_exchange_column(int i, int j, matrix_t *m);
 
   // transpose matrix
   matrix_t *matrix_copy_matrix_transpose(matrix_t *q, matrix_t *p);
@@ -141,7 +180,7 @@ extern "C" {
   matrix_t *cmatrix_new_and_copy_cmatrix_transpose(matrix_t *p);
 
   matrix_t *matrix_transpose(matrix_t *p);
-  matrix_t *matrix_transpose(matrix_t *p);
+  matrix_t *imatrix_transpose(matrix_t *p);
   matrix_t *cmatrix_transpose(matrix_t *p);
 
   // matrix copy
@@ -543,6 +582,7 @@ extern "C" {
   matrix_t *cmatrix_subtract_cmatrix_multiply_cmatrix(matrix_t *c, matrix_t *a, matrix_t *b);
 
   matrix_t *matrix_new_and_copy_matrix_multiply_matrix(matrix_t *a, matrix_t *b);
+  matrix_t *matrix_new_and_copy_matrix_multiply_imatrix(matrix_t *a, matrix_t *b);
   matrix_t *cmatrix_new_and_copy_cmatrix_multiply_cmatrix(matrix_t *a, matrix_t *b);
 
   // piecewise multiplication between matrix and matrix
@@ -721,11 +761,15 @@ extern "C" {
   matrix_t *matrix_new_and_copy_vector_multiply_vector(vector_t *a, vector_t *b);
   matrix_t *cmatrix_new_and_copy_cvector_multiply_cvector(vector_t *a, vector_t *b);
 
+  real_t matrix_get_trace(matrix_t *m);
+  complex_t cmatrix_get_trace(matrix_t *m);
+
   // matrix determinant
   //void matrix_determinant(real_t *det, matrix_t *mat);
   real_t matrix_get_determinant(matrix_t *mat);
   //void cmatrix_determinant(complex_t *det, matrix_t *p);
   complex_t cmatrix_get_determinant(matrix_t *p);
+
   // matrix cofactor
   matrix_t *matrix_copy_matrix_cofactor(matrix_t *q, matrix_t *p);
   matrix_t *cmatrix_copy_cmatrix_cofactor(matrix_t *q, matrix_t *p);

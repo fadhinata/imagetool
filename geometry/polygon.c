@@ -25,9 +25,10 @@
 #include <geometry/polygon.h>
 #include <geometry/point.h>
 
-int is_in_polygon(int x, int y, polygon_t *polygon)
+bool check_position_in_polygon_with_xy_profiling(int x, int y, polygon_t *polygon)
 {
-  int i, inside = 0;
+  int i;
+  bool inside = false;
   point_t *old, *new;
   point_t *left, *right;
 
@@ -37,23 +38,56 @@ int is_in_polygon(int x, int y, polygon_t *polygon)
   old = polygon_glimpse(polygon->count - 1, polygon);
   for (i = 0; i < polygon->count; i++) {
     new = polygon_glimpse(i, polygon);
-    if (new->x > old->x) {
+    if (point_get_x(new) > point_get_x(old)) {
       left = old; right = new;
     } else {
       left = new; right = old;
     }
-    if (((new->x < x) == (x <= old->x)) &&  /* edge "open" at left end */
-	((y - left->y) * (right->x - left->x) < (right->y - left->y) * (x - left->x))) {
+    // edge "open" at left end
+    if (((point_get_x(new) < x) == (x <= point_get_x(old))) &&
+	((y - point_get_y(left)) * (point_get_x(right) - point_get_x(left)) < (point_get_y(right) - point_get_y(left)) * (x - point_get_x(left)))) {
       inside = !inside;
     }
     old = new;
   }
+
   return inside;
 }
-
-int point_in_polygon(point_t *p, polygon_t *polygon)
+#if 0
+bool is_in_polygon(int x, int y, polygon_t *polygon)
 {
-  int i, inside = 0;
+  int i;
+  bool inside = false;
+  point_t *old, *new;
+  point_t *left, *right;
+
+  assert(polygon);
+  assert(polygon->count >= 3);
+
+  old = polygon_glimpse(polygon->count - 1, polygon);
+  for (i = 0; i < polygon->count; i++) {
+    new = polygon_glimpse(i, polygon);
+    if (point_get_x(new) > point_get_x(old)) {
+      left = old; right = new;
+    } else {
+      left = new; right = old;
+    }
+    if (((point_get_x(new) < x) == (x <= point_get_x(old))) &&  /* edge "open" at left end */
+	((y - point_get_y(left)) * point_get_x((right) - point_get_x(left)) < (point_get_y(right) - point_get_y(left)) * (x - point_get_x(left)))) {
+      inside = !inside;
+    }
+    old = new;
+  }
+
+  return inside;
+}
+#endif
+
+bool check_point_in_polygon_with_xy_profiling(point_t *p, polygon_t *polygon)
+//int point_in_polygon(point_t *p, polygon_t *polygon)
+{
+  bool inside = false;
+  int i;
   point_t *old, *new;
   point_t *left, *right;
 
@@ -64,16 +98,23 @@ int point_in_polygon(point_t *p, polygon_t *polygon)
   old = polygon_glimpse(polygon->count - 1, polygon);
   for (i = 0; i < polygon->count; i++) {
     new = polygon_glimpse(i, polygon);
-    if (new->x > old->x) {
+    if (point_get_x(new) > point_get_x(old)) {
+      //if (new->x > old->x) {
       left = old; right = new;
     } else {
       left = new; right = old;
     }
+    if (((point_get_x(new) < point_get_x(p)) == (point_get_x(p) <= point_get_x(old))) &&
+	((point_get_y(p) - point_get_y(left)) * (point_get_x(right) - point_get_x(left)) < (point_get_y(right) - point_get_y(left)) * (point_get_x(p) - point_get_x(left)))) {
+#if 0
     if (((new->x < p->x) == (p->x <= old->x)) &&  /* edge "open" at left end */
 	((p->y - left->y) * (right->x - left->x) < (right->y - left->y) * (p->x - left->x))) {
+#endif
+
       inside = !inside;
     }
     old = new;
   }
+
   return inside;
 }

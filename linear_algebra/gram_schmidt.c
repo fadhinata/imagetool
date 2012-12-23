@@ -16,6 +16,7 @@
 */
 #include <stdio.h>
 #include <math.h>
+#include <malloc.h>
 #include <assert.h>
 #include <float.h>
 
@@ -26,11 +27,11 @@
 #include <linear_algebra/vector_list.h>
 //#include <gram_schmidt.h>
 
+// orthonormalization
 int vector_list_create_gram_schmidt_process(vector_list_t *q, vector_list_t *p)
 {
-  int n, i, j;
-  vector_t *u, *v, *vnext;
-  real_t c;
+  vector_t *u, *v, *u_curr, *v_curr;
+  real_t c, d;
   dlink_t *a, *b;
 
   assert(q);
@@ -38,31 +39,38 @@ int vector_list_create_gram_schmidt_process(vector_list_t *q, vector_list_t *p)
   assert(vector_list_get_count(p) > 0);
   assert(vector_list_get_count(q) == 0);
 
-  // Step 1. Let v1 = u1
+  // Step 1. Let u(0) = v(0)
   a = p->tail->next;
-  u = (vector_t *)a->object;
-  v = vector_new_and_copy(u);
-  vector_list_insert(v, q);
+  v = (vector_t *)a->object;
+
+  u = vector_new_and_copy(v);
+  vector_list_insert(u, q);
 
   for (a = a->next; a != p->head; a = a->next) {
-    u = (vector_t *)a->object;
-    vnext = vector_new_and_copy(u);
+    // u(k) = v(k) - proj_{u(0)}(v(k)) - .... - proj_{u(n)}(v(k))
+    v_curr = (vector_t *)a->object;
+    u_curr = vector_new_and_copy(v_curr);
     for (b = q->tail->next; b != q->head; b = b->next) {
-      v = (vector_t *)b->object;
-      vector_dotproduct_vector(&c, u, v);
-      c /= vector_get_norm(v);
-      vector_subtract_vector_multiply_scalar(vnext, v, c);
+      u = (vector_t *)b->object;
+      // proj_u (v) = ((u * v) / (u * u)) * u
+      vector_dotproduct_vector(&c, u, v_curr);
+      vector_dotproduct_vector(&d, u, u);
+      c /= d;
+      vector_subtract_vector_multiply_scalar(u_curr, u, c);
     }
-    if (vector_iszero(vnext, 0, vector_get_dimension(vnext))) {
-      vector_destroy(vnext);
+
+    if (vector_iszero(u_curr, 0, vector_get_dimension(u_curr))) {
+      vector_destroy(u_curr);
       break;
     }
-    vector_list_insert(vnext, q);
+
+    vector_list_insert(u_curr, q);
   }
 
+  // normalization
   for (b = q->tail->next; b != q->head; b = b->next) {
-    v = (vector_t *)b->object;
-    vector_divide_scalar(v, vector_get_norm(v));
+    u = (vector_t *)b->object;
+    vector_divide_scalar(u, vector_get_norm(u));
   }
 
   return vector_list_get_count(q);
@@ -70,9 +78,8 @@ int vector_list_create_gram_schmidt_process(vector_list_t *q, vector_list_t *p)
 
 int cvector_list_create_gram_schmidt_process(vector_list_t *q, vector_list_t *p)
 {
-  int i, j, n;
-  vector_t *u, *v, *vnext;
-  complex_t c, norm;
+  vector_t *u, *v, *u_curr, *v_curr;
+  complex_t c, d;
   dlink_t *a, *b;
 
   assert(q);
@@ -80,222 +87,192 @@ int cvector_list_create_gram_schmidt_process(vector_list_t *q, vector_list_t *p)
   assert(vector_list_get_count(p) > 0);
   assert(vector_list_get_count(q) == 0);
 
-  // Step 1. Let v1 = u1
+  // Step 1. Let u0 = v0
   a = p->tail->next;
-  u = (vector_t *)a->object;
-  v = vector_new_and_copy(u);
-  vector_list_insert(v, q);
+  v = (vector_t *)a->object;
+
+  u = vector_new_and_copy(v);
+  vector_list_insert(u, q);
 
   for (a = a->next; a != p->head; a = a->next) {
-    u = (vector_t *)a->object;
-    vnext = vector_new_and_copy(u);
+    v_curr = (vector_t *)a->object;
+    u_curr = vector_new_and_copy(v_curr);
     for (b = q->tail->next; b != q->head; b = b->next) {
-      v = (vector_t *)b->object;
-      cvector_dotproduct_cvector(&c, u, v);
-      norm = cvector_get_norm(v);
-      complex_divide_complex(&c, &norm);
-      cvector_subtract_cvector_multiply_scalar(vnext, v, c);
+      u = (vector_t *)b->object;
+      cvector_dotproduct_cvector(&c, u, v_curr);
+      cvector_dotproduct_cvector(&d, u, u);
+      //norm = cvector_get_norm(v);
+      complex_divide_complex(&c, &d);
+      cvector_subtract_cvector_multiply_scalar(u_curr, u, c);
     }
-    if (cvector_iszero(vnext, 0, vector_get_dimension(vnext))) {
-      vector_destroy(vnext);
+    if (cvector_iszero(u_curr, 0, vector_get_dimension(u_curr))) {
+      vector_destroy(u_curr);
       break;
     }
-    vector_list_insert(vnext, q);
+    vector_list_insert(u_curr, q);
   }
 
+  // normalization
   for (b = q->tail->next; b != q->head; b = b->next) {
-    v = (vector_t *)b->object;
-    norm = cvector_get_norm(v);
-    complex_copy_complex_sqrt(&c, &norm);
-    cvector_divide_scalar(v, c);
+    u = (vector_t *)b->object;
+    d = cvector_get_norm(u);
+    cvector_divide_scalar(u, d);
   }
 
   return vector_list_get_count(q);
 }
 
-/* n * basis -> (n or below n) * orthonormal basis */
-int vector_gram_schmidt_process(vector_t **q, vector_t **p, int n)
+// m : h x w (h: dimension,  w: tries)
+static int matrix_self_gram_schmidt_process(matrix_t *m, int x, int y, int w, int h)
 {
-  int i, j;
-  vector_t *u, *v, *vnext;
-  real_t c, norm;
+  int i, j, k;
+  real_t u, v, *u_vec;
+  real_t c, d;
 
-  assert(q);
-  assert(p);
-  assert(vector_get_dimension(*q) == vector_get_dimension(*p));
+  u_vec = (real_t *)malloc(h * sizeof(real_t));
 
-  // Step 1. Let v1 = u1
-  v = *(q + 0), u = *(p + 0);
-  vector_copy_vector(v, 0, u, 0, vector_get_dimension(u));
-  for (i = 1; i < n; i++) {
-    vnext = *(q+i);
-    u = *(p+i);
-    vector_copy_vector(vnext, 0, u, 0, vector_get_dimension(u));
-    for (j = 0; j < i; j++) {
-      v = *(q+j);
-      vector_dotproduct_vector(&c, u, v);
-      norm = vector_get_norm(v);
-      c /= norm;
-      //complex_divide_complex(c, norm);
-      vector_subtract_vector_multiply_scalar(vnext, v, c);
+  // Step 1. Let U0 = V0
+  // nothing to do
+
+  for (i = x + 1; i < x + w; i++) {
+    // Step 2.
+    // U(i) = V(i) - proj_{U(0)}(V(i)) - proj_{U(1)}(V(i)) - ....
+    // proj_{U}(V) = (<U,V> / <U,U>) * U
+
+    // U(i) = V(i)
+    for (k = 0; k < h; k++) u_vec[k] = matrix_get_value(m, i, y + k);
+
+    for (j = x; j < i; j++) {
+      // U(i) -= proj_{U(j)}(V(i))
+      c = d = 0;
+      for (k = y; k < y + h; k++) {
+	v = matrix_get_value(m, i, k);
+	u = matrix_get_value(m, j, k);
+	c += u * v;
+	d += u * u;
+      }
+      c /= d;
+      for (k = y; k < y + h; k++) {
+	u = matrix_get_value(m, j, k);
+	u_vec[k - y] -= c * u;
+      }
     }
-    if (vector_iszero(vnext, 0, vector_get_dimension(vnext))) break;
+
+    for (k = 0; k < h; k++) matrix_put_value(u_vec[k], m, i, y + k);
+
+    if (matrix_is_zero(m, i, y, 1, h)) break;
   }
-  for (j = 0; j < i; j++) {
-    v = *(q+j);
-    norm = vector_get_norm(v);
-    vector_divide_scalar(v, sqrt(norm));
+
+
+  free(u_vec);
+
+  // normalization
+  for (j = x; j < i; j++) {
+    d = 0;
+    for (k = 0; k < h; k++) {
+      u = matrix_get_value(m, j, y + k);
+      d += u * u;
+    }
+    d = sqrt(d);
+    matrix_divide_scalar_on_region(m, d, j, y, 1, h);
   }
-  return i;
+
+  return i - x;
 }
 
-int cvector_gram_schmidt_process(vector_t **q, vector_t **p, int n)
-{
-  int i, j;
-  vector_t *u, *v, *vnext;
-  complex_t c, norm;
-  assert(q);
-  assert(p);
-  assert(vector_get_dimension(*q) == vector_get_dimension(*p));
-  // Step 1. Let v1 = u1
-  v = *(q+0), u = *(p+0);
-  cvector_copy_cvector(v, 0, u, 0, vector_get_dimension(u));
-  for (i = 1; i < n; i++) {
-    vnext = *(q+i);
-    u = *(p+i);
-    cvector_copy_cvector(vnext, 0, u, 0, vector_get_dimension(u));
-    for (j = 0; j < i; j++) {
-      v = *(q+j);
-      cvector_dotproduct_cvector(&c, u, v);
-      norm = cvector_get_norm(v);
-      complex_divide_complex(&c, &norm);
-      cvector_subtract_cvector_multiply_scalar(vnext, v, c);
-    }
-    if (cvector_iszero(vnext, 0, vector_get_dimension(vnext))) break;
-  }
-  for (j = 0; j < i; j++) {
-    v = *(q+j);
-    norm = cvector_get_norm(v);
-    complex_copy_complex_sqrt(&c, &norm);
-    cvector_divide_scalar(v, c);
-  }
-  return i;
-}
 
 matrix_t *matrix_new_and_gram_schmidt_process(matrix_t *p)
 {
-  int i, j, k;
-  real_t u, v, vnext;
-  real_t c, norm;
+  int n;
   matrix_t *tmp, *q;
 
   assert(p);
 
   tmp = matrix_new_and_copy(p);
+  n = matrix_self_gram_schmidt_process(tmp, 0, 0, matrix_get_columns(tmp), matrix_get_rows(tmp));
 
-  // Step 1. Let v1 = u1
-  for (i = 1; i < matrix_get_columns(p); i++) {
-    for (j = 0; j < i; j++) {
-      c = norm = 0.0;
-      for (k = 0; k < matrix_get_rows(p); k++) {
-	v = matrix_get_value(tmp, j, k);//MATRIX_GET(v, q, j, k);
-	u = matrix_get_value(tmp, i, k);//MATRIX_GET(u, p, i, k);
-	c += v*u;
-	norm += v*v;
-      }
-      c /= norm;
-      for (k = 0; k < matrix_get_rows(tmp); k++) {
-	v = matrix_get_value(tmp, j, k);//MATRIX_GET(v, q, j, k);
-	vnext = matrix_get_value(tmp, i, k);//MATRIX_GET(vnext, q, i, k);
-	vnext -= v * c;
-	matrix_put_value(vnext, tmp, i, k);//MATRIX_PUT(vnext, q, i, k);
-      }
-    }
+  if (n == matrix_get_columns(tmp)) return tmp;
 
-    for (k = 0; k < matrix_get_rows(tmp); k++) {
-      vnext = matrix_get_value(tmp, i, k);//MATRIX_GET(vnext, q, i, k);
-      if (!(vnext < DBL_EPSILON)) break; // non-zero
-    }
-    if (k >= matrix_get_rows(tmp)) break;
-  }
-
-  for (j = 0; j < i; j++) {
-    norm = 0.0;
-    for (k = 0; k < matrix_get_rows(tmp); k++) {
-      v = matrix_get_value(tmp, j, k);//MATRIX_GET(v, q, j, k);
-      norm += v*v;
-    }
-    norm = sqrt(norm);
-    for (k = 0; k < matrix_get_rows(tmp); k++) {
-      v = matrix_get_value(tmp, j, k);//MATRIX_GET(v, q, j, k);
-      v /= norm;
-      matrix_put_value(v, tmp, j, k);//MATRIX_PUT(v, q, j, k);
-    }
-  }
-
-  q = matrix_new(i, matrix_get_rows(tmp), false);
-  matrix_copy_matrix(q, 0, 0, tmp, 0, 0, i, matrix_get_rows(tmp));
+  q = matrix_new(n, matrix_get_rows(tmp), false);
+  matrix_copy_matrix(q, 0, 0, tmp, 0, 0, n, matrix_get_rows(tmp));
 
   matrix_destroy(tmp);
 
   return q;
 }
 
-matrix_t *cmatrix_new_and_gram_schmidt_process(matrix_t *p)
+static int cmatrix_self_gram_schmidt_process(matrix_t *m, int x, int y, int w, int h)
 {
   int i, j, k;
-  complex_t u, v, vnext;
-  complex_t c, norm;
+  complex_t u, v, *u_vec;
+  complex_t c, d, tmp;
+
+  u_vec = (complex_t *)malloc(h * sizeof(complex_t));
+
+  // Step 1. Let U0 = V0
+  // nothing to do
+
+  for (i = x + 1; i < x + w; i++) {
+    // U(i) = V(i) - proj_{U(0)}(V(i)) - proj_{U(2)}(V(i)) - ....
+    // proj_{U}(V) = ((U * V) / (U * U)) * U
+
+    for (k = 0; k < h; k++) cmatrix_read_value(&u_vec[k], m, i, y + k);
+
+    for (j = x; j < i; j++) {
+      c.real = c.imag = d.real = d.imag = 0;
+      for (k = y; k < y + h; k++) {
+	cmatrix_read_value(&v, m, i, k);
+	cmatrix_read_value(&u, m, j, k);
+	complex_add_complex_multiply_complex(&c, &u, complex_conjugate(&tmp, &v));
+	complex_add_complex_multiply_complex(&d, &u, complex_conjugate(&tmp, &u));
+      }
+      complex_divide_complex(&c, &d);
+      for (k = y; k < y + h; k++) {
+	cmatrix_read_value(&u, m, j, k);
+	complex_subtract_complex_multiply_complex(&u_vec[k-y], &u, &c);
+      }
+    }
+
+    for (k = 0; k < h; k++) cmatrix_put_value(u_vec[k], m, i, y + k);
+
+    if (cmatrix_is_zero(m, i, y, 1, y +h)) break;
+  }
+
+  free(u_vec);
+
+  // normalization
+  for (j = x; j < i; j++) {
+    d.real = d.imag = 0;
+    for (k = y; k < y + h; k++) {
+      cmatrix_read_value(&u, m, j, k);
+      complex_add_complex_multiply_complex(&d, &u, complex_conjugate(&tmp, &u));
+    }
+    complex_copy_complex_sqrt(&c, &d);
+    for (k = y; k < y + h; k++) {
+      cmatrix_read_value(&u, m, j, k);
+      complex_divide_complex(&u, &c);
+      cmatrix_put_value(u, m, j, k);
+    }
+  }
+
+  return i - x;
+}
+
+matrix_t *cmatrix_new_and_gram_schmidt_process(matrix_t *p)
+{
+  int n;
   matrix_t *q, *tmp;
 
   assert(p);
   assert(matrix_is_imaginary(p));
 
   tmp = matrix_new_and_copy(p);
+  n = cmatrix_self_gram_schmidt_process(tmp, 0, 0, matrix_get_columns(tmp), matrix_get_rows(tmp));
 
-  // Step 1. Let v1 = u1
-  for (i = 1; i < matrix_get_columns(p); i++) {
-    for (j = 0; j < i; j++) {
-      c.real = c.imag = norm.real = norm.imag = 0.0;
-      for (k = 0; k < matrix_get_rows(tmp); k++) {
-	cmatrix_read_value(&v, tmp, j, k);//CMATRIX_GET(v, q, j, k);
-	cmatrix_read_value(&u, tmp, i, k);//CMATRIX_GET(u, p, i, k);
-	complex_add_complex_multiply_complex(&c, &v, &u);
-	complex_add_complex_multiply_complex(&norm, &v, &v);
-      }
-      complex_divide_complex(&c, &norm);
-      for (k = 0; k < matrix_get_rows(tmp); k++) {
-	cmatrix_read_value(&v, q, j, k);//CMATRIX_GET(v, q, j, k);
-	cmatrix_read_value(&vnext, q, i, k);//CMATRIX_GET(vnext, q, i, k);
-	complex_subtract_complex_multiply_complex(&vnext, &v, &c);
-	cmatrix_put_value(vnext, q, i, k);//CMATRIX_PUT(vnext, q, i, k);
-      }
-    }
+  if (n == matrix_get_columns(tmp)) return tmp;
 
-    for (k = 0; k < matrix_get_rows(tmp); k++) {
-      cmatrix_read_value(&vnext, tmp, i, k);//CMATRIX_GET(vnext, q, i, k);
-      if (!(abs(vnext.real) < DBL_EPSILON && abs(vnext.imag) < DBL_EPSILON))
-	break;
-    }
-    if (k >= matrix_get_rows(tmp)) break;
-  }
-
-  for (j = 0; j < i; j++) {
-    norm.real = norm.imag = 0.0;
-    for (k = 0; k < matrix_get_rows(tmp); k++) {
-      cmatrix_read_value(&v, tmp, j, k);//CMATRIX_GET(v, q, j, k);
-      complex_add_complex_multiply_complex(&norm, &v, &v);
-    }
-    complex_copy_complex_sqrt(&c, &norm);
-    for (k = 0; k < matrix_get_rows(tmp); k++) {
-      cmatrix_read_value(&v, tmp, j, k);//CMATRIX_GET(v, q, j, k);
-      complex_divide_complex(&v, &c);
-      cmatrix_put_value(v, tmp, j, k);//CMATRIX_PUT(v, q, j, k);
-    }
-  }
-
-  q = matrix_new(i, matrix_get_rows(tmp), true);
-  cmatrix_copy_cmatrix(q, 0, 0, tmp, 0, 0, i, matrix_get_rows(tmp));
+  q = matrix_new(n, matrix_get_rows(tmp), true);
+  cmatrix_copy_cmatrix(q, 0, 0, tmp, 0, 0, n, matrix_get_rows(tmp));
 
   matrix_destroy(tmp);
 
@@ -304,132 +281,40 @@ matrix_t *cmatrix_new_and_gram_schmidt_process(matrix_t *p)
 
 int matrix_gram_schmidt_process(matrix_t *q, matrix_t *p)
 {
-  int i, j, k;
-  real_t u, v, vnext;
-  real_t c, norm;
+  int n;
+  matrix_t *tmp;
 
   assert(q);
   assert(p);
-  assert(matrix_are_matched(q, p));
+  assert(matrix_get_columns(q) >= matrix_get_columns(p));
+  assert(matrix_get_rows(q) >= matrix_get_rows(p));
 
-  // Step 1. Let v1 = u1
-  matrix_copy_matrix(q, 0, 0, p, 0, 0, 1, matrix_get_rows(p));
-  for (i = 1; i < matrix_get_columns(p); i++) {
-    //vector_copy_column_vector_of_matrix(vnext, q, i, 0);
-    //vector_copy_column_vector_of_matrix(u, p, i, 0);
-    //vector_copy_vector(vnext, 0, u, 0, u->length);
-    matrix_copy_matrix(q, i, 0, p, i, 0, 1, matrix_get_rows(p));
-    for (j = 0; j < i; j++) {
-      //vector_copy_column_vector_of_matrix(v, q, j, 0);
-      //vector_dotproduct_vector(&c, u, v);
-      //vector_get_norm(&norm, v);
-      c = norm = 0.0;
-      for (k = 0; k < matrix_get_rows(p); k++) {
-	v = matrix_get_value(q, j, k);//MATRIX_GET(v, q, j, k);
-	u = matrix_get_value(q, i, k);//MATRIX_GET(u, p, i, k);
-	c += v*u;
-	norm += v*v;
-      }
-      c /= norm;
-      //vector_subtract_vector_multiply_scalar(vnext, v, c);
-      for (k = 0; k < matrix_get_rows(q); k++) {
-	v = matrix_get_value(q, j, k);//MATRIX_GET(v, q, j, k);
-	vnext = matrix_get_value(q, i, k);//MATRIX_GET(vnext, q, i, k);
-	vnext -= v*c;
-	matrix_put_value(vnext, q, i, k);//MATRIX_PUT(vnext, q, i, k);
-      }
-    }
-    //if (!vector_is_zero(vnext, 0, vnext->length)) break;
-    for (k = 0; k < matrix_get_rows(q); k++) {
-      vnext = matrix_get_value(q, i, k);//MATRIX_GET(vnext, q, i, k);
-      if (!(vnext < DBL_EPSILON)) break; // non-zero
-    }
-    if (k >= q->rows) break;
-  }
-  for (j = 0; j < i; j++) {
-    norm = 0.0;
-    for (k = 0; k < matrix_get_rows(q); k++) {
-      v = matrix_get_value(q, j, k);//MATRIX_GET(v, q, j, k);
-      norm += v*v;
-    }
-    norm = sqrt(norm);
-    for (k = 0; k < matrix_get_rows(q); k++) {
-      v = matrix_get_value(q, j, k);//MATRIX_GET(v, q, j, k);
-      v /= norm;
-      matrix_put_value(v, q, j, k);//MATRIX_PUT(v, q, j, k);
-    }
-  }
-  return i;
+  tmp = matrix_new_and_copy(p);
+  n = matrix_self_gram_schmidt_process(tmp, 0, 0, matrix_get_columns(tmp), matrix_get_rows(tmp));
+
+  matrix_copy_matrix(q, 0, 0, tmp, 0, 0, n, matrix_get_rows(tmp));
+  matrix_destroy(tmp);
+
+  return n;
 }
 
 int cmatrix_gram_schmidt_process(matrix_t *q, matrix_t *p)
 {
-  int i, j, k;
-  complex_t u, v, vnext;
-  complex_t c, norm;
+  int n;
+  matrix_t *tmp;
 
   assert(q);
   assert(matrix_is_imaginary(q));
   assert(p);
   assert(matrix_is_imaginary(p));
-  assert(matrix_are_matched(p, q));
+  assert(matrix_get_columns(q) >= matrix_get_columns(p));
+  assert(matrix_get_rows(q) >= matrix_get_rows(p));
 
-  // Step 1. Let v1 = u1
-  //v = &q[0], u = &p[0];
-  cmatrix_copy_cmatrix(q, 0, 0, p, 0, 0, 1, matrix_get_rows(p));
-  for (i = 1; i < matrix_get_columns(p); i++) {
-    //vnext = &q[i];
-    //cvector_copy_column_vector_of_cmatrix(vnext, q, i, 0);
-    //u = &p[i];
-    //cvector_copy_column_vector_of_cmatrix(u, p, i, 0);
-    //cvector_copy_cvector(vnext, 0, u, 0, u->length);
-    cmatrix_copy_cmatrix(q, i, 0, p, i, 0, 1, matrix_get_rows(p));
-    for (j = 0; j < i; j++) {
-      //v = &q[j];
-      //cvector_copy_column_vector_of_cmatrix(v, q, j, 0);
-      //cvector_dotproduct_cvector(&c, u, v);
-      //cvector_get_norm(&norm, v);
-      c.real = c.imag = norm.real = norm.imag = 0.0;
-      for (k = 0; k < matrix_get_rows(q); k++) {
-	cmatrix_read_value(&v, q, j, k);//CMATRIX_GET(v, q, j, k);
-	cmatrix_read_value(&u, q, i, k);//CMATRIX_GET(u, p, i, k);
-	complex_add_complex_multiply_complex(&c, &v, &u);
-	complex_add_complex_multiply_complex(&norm, &v, &v);
-      }
-      complex_divide_complex(&c, &norm);
-      //printf("c(%lf, %lf)\n", c.real, c.imag);
-      //cvector_subtract_cvector_multiply_scalar(vnext, v, c);
-      for (k = 0; k < matrix_get_rows(q); k++) {
-	cmatrix_read_value(&v, q, j, k);//CMATRIX_GET(v, q, j, k);
-	cmatrix_read_value(&vnext, q, i, k);//CMATRIX_GET(vnext, q, i, k);
-	complex_subtract_complex_multiply_complex(&vnext, &v, &c);
-	cmatrix_put_value(vnext, q, i, k);//CMATRIX_PUT(vnext, q, i, k);
-      }
-      //matrix_dump(q);
-    }
-    //if (!cvector_is_zero(vnext, 0, vnext->length)) break;
-    //cmatrix_copy_column_cvector(q, i, 0, vnext);
-    for (k = 0; k < matrix_get_rows(q); k++) {
-      cmatrix_read_value(&vnext, q, i, k);//CMATRIX_GET(vnext, q, i, k);
-      if (!(abs(vnext.real) < DBL_EPSILON && abs(vnext.imag) < DBL_EPSILON))
-	break;
-    }
-    if (k >= matrix_get_rows(q)) break;
-  }
-  for (j = 0; j < i; j++) {
-    norm.real = norm.imag = 0.0;
-    for (k = 0; k < matrix_get_rows(q); k++) {
-      cmatrix_read_value(&v, q, j, k);//CMATRIX_GET(v, q, j, k);
-      complex_add_complex_multiply_complex(&norm, &v, &v);
-    }
-    complex_copy_complex_sqrt(&c, &norm);
-    //complex_sqrt(&norm);
-    for (k = 0; k < matrix_get_rows(q); k++) {
-      cmatrix_read_value(&v, q, j, k);//CMATRIX_GET(v, q, j, k);
-      //complex_divide_complex(&v, &norm);
-      complex_divide_complex(&v, &c);
-      cmatrix_put_value(v, q, j, k);//CMATRIX_PUT(v, q, j, k);
-    }
-  }
-  return i;
+  tmp = matrix_new_and_copy(p);
+  n = cmatrix_self_gram_schmidt_process(tmp, 0, 0, matrix_get_columns(tmp), matrix_get_rows(tmp));
+
+  cmatrix_copy_cmatrix(q, 0, 0, tmp, 0, 0, n, matrix_get_rows(tmp));
+  matrix_destroy(tmp);
+
+  return n;
 }

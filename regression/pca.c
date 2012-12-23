@@ -90,10 +90,12 @@ int NIPALS_for_PCA(matrix_t *pc, matrix_t *x)
     } while (1);
     matrix_copy_column_vector(pc, i, 0, p);
   }
+
   matrix_destroy(x_i);
   vector_destroy(p);
   vector_destroy(t);
   return 0;
+
  __error_return__:
   matrix_destroy(x_i);
   vector_destroy(p);

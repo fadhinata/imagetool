@@ -43,26 +43,26 @@
 
 #ifdef REAL_TYPE_AS_DOUBLE
 typedef double real_t;
-#define cosr(x) cos(x)
-#define acosr(x) acos(x)
-#define sinr(x) sin(x)
-#define asinr(x) asin(x)
-#define tanr(x) tan(x)
-#define atanr(x) atan(x)
-#define tan2r(y, x) tan2(y, x)
-#define atan2r(y, x) atan2(y, x)
-#define REAL_EPSILON DBL_EPSILON
+# define cosr(x) cos(x)
+# define acosr(x) acos(x)
+# define sinr(x) sin(x)
+# define asinr(x) asin(x)
+# define tanr(x) tan(x)
+# define atanr(x) atan(x)
+# define tan2r(y, x) tan2(y, x)
+# define atan2r(y, x) atan2(y, x)
+# define REAL_EPSILON DBL_EPSILON
 #elif REAL_TYPE_AS_FLOAT
 typedef float real_t;
-#define cosr(x) cosf(x)
-#define acosr(x) acosf(x)
-#define sinr(x) sinf(x)
-#define asinr(x) asinf(x)
-#define tanr(x) tanf(x)
-#define atanr(x) atanf(x)
-#define tan2r(y, x) tan2f(y, x)
-#define atan2r(y, x) atan2f(y, x)
-#define REAL_EPSILON FLT_EPSILON
+# define cosr(x) cosf(x)
+# define acosr(x) acosf(x)
+# define sinr(x) sinf(x)
+# define asinr(x) asinf(x)
+# define tanr(x) tanf(x)
+# define atanr(x) atanf(x)
+# define tan2r(y, x) tan2f(y, x)
+# define atan2r(y, x) atan2f(y, x)
+# define REAL_EPSILON FLT_EPSILON
 #else
 # error "Undefined real_t!: data-type"
 #endif

@@ -111,16 +111,29 @@ CSRC += transform/dct.c
 CSRC += transform/fourier.c
 CSRC += wavelet/daub4.c
 CSRC += wavelet/haar.c
-CSRC += interface/screen.c
-CSRC += examples/dt_wshed.c
-CSRC += examples/carrot_process.c
-CSRC += examples/tricam_process.c
-CSRC += examples/image_downsize.c
+CSRC += envi/envi.c
 
 # Define all object files.
 COBJ = $(CSRC:.c=.o)
 
 CPPSRC = main.cpp
+CPPSRC += interface/screen.cpp
+CPPSRC += examples/dt_wshed.cpp
+CPPSRC += examples/carrot_process.cpp
+CPPSRC += examples/tricam_process.cpp
+CPPSRC += examples/tricam_sample.cpp
+CPPSRC += examples/tricam_diff.cpp
+CPPSRC += examples/tricam_morphology.cpp
+CPPSRC += examples/tricam_labeling.cpp
+CPPSRC += examples/tricam_display.cpp
+CPPSRC += examples/image_downsize.cpp
+CPPSRC += examples/tricam_diff_div.cpp
+CPPSRC += examples/tricam_citrus.cpp
+CPPSRC += examples/tricam_apple_sub_div.cpp
+CPPSRC += examples/tricam_apple_sub.cpp
+CPPSRC += examples/matrix_test.cpp
+CPPSRC += examples/FLIR_PM595.cpp
+
 CPPOBJ = $(CPPSRC:.cpp=.o)
 
 RES  = 

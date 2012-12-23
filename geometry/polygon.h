@@ -30,7 +30,7 @@ extern "C" {
 
 #define polygon_new() (polygon_t *)point_list_new()
 #define polygon_inc_ref(p) ((p)->reference++)
-#define polygon_dec_ref(p) ((p)->reference--)
+#define polygon_dec_ref(p) ((p)->reference = (p)->reference > 0 ? (p)->reference-1 : (p)->reference)
 #define polygon_get_ref(p) ((p)->reference)
 #define polygon_get_count(polygon) ((polygon)->count)
 #define polygon_copy(copyer, copee) point_list_copy((point_list_t *)(copyer), (point_list_t *)(copee))
@@ -44,11 +44,13 @@ extern "C" {
 #define polygon_exchange(i, j, polygon) point_list_exchange(i, j, (point_list_t *)(polygon))
 #define polygon_put(point, i, polygon) point_list_put(point, i, (point_list_t *)(polygon))
 #define polygon_query(p, polygon) point_list_query(p, (point_list_t *)(polygon))
-#define polygon_delete(polygon) point_list_delete((point_list_t *)polygon)
+#define polygon_clear(polygon) point_list_clear((point_list_t *)polygon)
 #define polygon_destroy(polygon) point_list_destroy((point_list_t *)(polygon))
 
-  int is_in_polygon(int x, int y, polygon_t *polygon);
-  int point_in_polygon(point_t *p, polygon_t *polygon);
+  bool check_position_in_polygon_with_xy_profiling(int x, int y, polygon_t *polygon);
+  bool check_point_in_polygon_with_xy_profiling(point_t *p, polygon_t *polygon);
+  //int is_in_polygon(int x, int y, polygon_t *polygon);
+  //int point_in_polygon(point_t *p, polygon_t *polygon);
 
 #ifdef __cplusplus
 }

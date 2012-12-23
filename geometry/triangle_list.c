@@ -172,7 +172,7 @@ int triangle_list_query(triangle_t *tri, triangle_list_t *list)
   return -1;
 }
 
-void triangle_list_delete(triangle_list_t *list)
+void triangle_list_isolate(triangle_list_t *list)
 {
   dlink_t *link;
   triangle_t *tri;

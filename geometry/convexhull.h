@@ -32,13 +32,13 @@ extern "C" {
     QUICK_HULL
   } convexhull_method_t;
 
-  int convexhull_compute(polygon_t *convexhull, point_list_t *points, convexhull_method_t way);
-  real_t convexhull_diameter(line_t *diameter, polygon_t *convexhull);
-  real_t convexhull_weak_diameter(line_t *diameter, polygon_t *convexhull);
-  real_t convexhull_min_width(line_t *width, polygon_t *convexhull);
+  int convexhulling(polygon_t *chull, point_list_t *points, convexhull_method_t way);
+  real_t convexhull_compute_diameter(line_t *diameter, polygon_t *chull);
+  real_t convexhull_compute_weak_diameter(line_t *diameter, polygon_t *chull);
+  real_t convexhull_compute_min_width(line_t *width, polygon_t *chull);
   //void convexhull_get_circumference_rectangles(dlist_t *circumrects, polygon_t *convexhull);
-  real_t convexhull_create_min_area_rectangle(polygon_t *minrect, polygon_t *convexhull);
-  real_t convexhull_create_min_perimeter_rectangle(polygon_t *minrect, polygon_t *convexhull);
+  real_t convexhull_compute_min_area_rectangle(polygon_t *minrect, polygon_t *chull);
+  real_t convexhull_compute_min_perimeter_rectangle(polygon_t *minrect, polygon_t *chull);
 
 #ifdef __cplusplus
 }

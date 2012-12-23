@@ -52,7 +52,7 @@ line_list_t *line_list_new_and_copy(line_list_t *copee)
   for (a = copee->tail->next; a != copee->head; a = a->next) {
     b = dlink_new();
     p = line_new_and_copy((line_t *)a->object);
-    line_inc_ref(p);
+    //line_inc_ref(p);
     b->object = (void *)p;
     dlist_insert(b, (dlist_t *)ret);
   }
@@ -139,7 +139,6 @@ line_t *line_list_pick(int i, line_list_t *list)
   link = dlist_pick(i, (dlist_t *)list);
   line = (line_t *)link->object;
   line_dec_ref(line);
-  line->reference--;
   dlink_destroy(link);
 
   return line;
@@ -174,7 +173,7 @@ int line_list_query(line_t *line, line_list_t *list)
 
   return -1;
 }
-
+/*
 void line_list_delete(line_list_t *list)
 {
   dlink_t *link;
@@ -184,10 +183,10 @@ void line_list_delete(line_list_t *list)
 
   for (link = list->tail->next; link != list->head; link = link->next) {
     line = (line_t *)link->object;
-    line_dec_ref(line);
+    line_(line);
   }
 }
-
+*/
 void line_list_destroy(line_list_t *list)
 {
   dlink_t *link;

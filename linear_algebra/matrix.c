@@ -105,6 +105,322 @@ void matrix_dump(matrix_t *m)
   }
 }
 
+#define MATRIX_IS_ZERO(m, columns, rows, c, r, dc, dr) { \
+    int i, j, nc, nr;					\
+    real_t *buf;					\
+    assert(m);						\
+    assert(c >= 0 && c < columns);			\
+    assert(r >= 0 && r < rows);				\
+    assert(dc > 0);					\
+    assert(dr > 0);					\
+    nc = min(c+dc, columns);				\
+    nr = min(r+dr, rows);				\
+    buf = m + (r) * (columns);				\
+    for (i = r; i < nr; i++) {				\
+      for (j = c; j < nc; j++) {			\
+	if (!(abs(*(buf+j)) < REAL_EPSILON))		\
+	  return false;					\
+      }							\
+      buf += columns;					\
+    }							\
+    return true;					\
+  }
+
+bool matrix_is_zero(matrix_t *m, int c, int r, int dc, int dr)
+{
+  MATRIX_IS_ZERO(matrix_get_buffer(m), matrix_get_columns(m), matrix_get_rows(m), c, r, dc, dr);
+}
+
+bool imatrix_is_zero(matrix_t *m, int c, int r, int dc, int dr)
+{
+  MATRIX_IS_ZERO(imatrix_get_buffer(m), matrix_get_columns(m), matrix_get_rows(m), c, r, dc, dr);
+}
+
+bool cmatrix_is_zero(matrix_t *m, int c, int r, int dc, int dr)
+{
+  assert(m);
+
+  if (matrix_is_zero(m, c, r, dc, dr) &&
+      (!matrix_is_imaginary(m) || imatrix_is_zero(m, c, r, dc, dr)))
+    return true;
+
+  return false;
+}
+
+bool matrix_is_symmetric(matrix_t *m)
+{
+  int i, j, n;
+
+  assert(m);
+  assert(matrix_is_square(m));
+
+  n = matrix_get_rows(m);
+  for (i = 0; i < n - 1; i++) {
+    for (j = i + 1; j < n; j++) {
+      if (!(matrix_get_value(m, j, i) == matrix_get_value(m, i, j)))
+	return false;
+    }
+  }
+
+  return true;
+}
+
+bool imatrix_is_symmetric(matrix_t *m)
+{
+  int i, j, n;
+
+  assert(m);
+  assert(matrix_is_imaginary(m));
+  assert(matrix_is_square(m));
+
+  n = matrix_get_rows(m);
+  for (i = 0; i < n - 1; i++) {
+    for (j = i + 1; j < n; j++) {
+      if (!(imatrix_get_value(m, j, i) == imatrix_get_value(m, i, j)))
+	return false;
+    }
+  }
+
+  return true;
+}
+
+bool cmatrix_is_symmetric(matrix_t *m)
+{
+  assert(m);
+
+  if (!matrix_is_symmetric(m))
+    return false;
+
+  if (matrix_is_imaginary(m)) {
+    if (!imatrix_is_symmetric(m))
+      return false;
+  }
+
+  return true;
+}
+
+bool matrix_is_skew_symmetric(matrix_t *m)
+{
+  int i, j, n;
+
+  assert(m);
+  assert(matrix_is_square(m));
+
+  n = matrix_get_rows(m);
+  for (i = 0; i < n - 1; i++) {
+    for (j = i + 1; j < n; j++) {
+      if (!(matrix_get_value(m, j, i) == -1 * matrix_get_value(m, i, j)))
+	return false;
+    }
+  }
+
+  return true;
+}
+
+bool imatrix_is_skew_symmetric(matrix_t *m)
+{
+  int i, j, n;
+
+  assert(m);
+  assert(matrix_is_imaginary(m));
+  assert(matrix_is_square(m));
+
+  n = matrix_get_rows(m);
+  for (i = 0; i < n - 1; i++) {
+    for (j = i + 1; j < n; j++) {
+      if (!(imatrix_get_value(m, j, i) == -1 * imatrix_get_value(m, i, j)))
+	return false;
+    }
+  }
+
+  return true;
+}
+
+bool cmatrix_is_skew_symmetric(matrix_t *m)
+{
+  assert(m);
+
+  if (!matrix_is_skew_symmetric(m))
+    return false;
+
+  if (matrix_is_imaginary(m)) {
+    if (!imatrix_is_skew_symmetric(m))
+      return false;
+  }
+  return true;
+}
+
+bool matrix_is_diagonal(matrix_t *m)
+{
+  int i, j;
+
+  assert(m);
+  
+  for (i = 0; i < matrix_get_rows(m); i++) {
+    for (j = 0; j < matrix_get_columns(m); j++) {
+      if (!(i == j) && !(matrix_get_value(m, j, i) == 0))
+	return false;
+    }
+  }
+
+  return true;
+}
+
+bool imatrix_is_diagonal(matrix_t *m)
+{
+  int i, j;
+
+  assert(m);
+  
+  for (i = 0; i < matrix_get_rows(m); i++) {
+    for (j = 0; j < matrix_get_columns(m); j++) {
+      if (!(i == j) && !(imatrix_get_value(m, j, i) == 0))
+	return false;
+    }
+  }
+
+  return true;
+}
+
+bool cmatrix_is_diagonal(matrix_t *m)
+{
+  assert(m);
+
+  if (!matrix_is_diagonal(m))
+    return false;
+
+  if (matrix_is_imaginary(m)) {
+    if (!imatrix_is_diagonal(m))
+      return false;
+  }
+
+  return true;
+}
+
+bool matrix_is_identity(matrix_t *m)
+{
+  int i, j, n;
+
+  assert(m);
+  assert(matrix_is_square(m));
+
+  n = matrix_get_columns(m);
+
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      if (i == j) {
+	if (!(abs(matrix_get_value(m, j, i) - 1.0) < REAL_EPSILON))
+	  return false;
+      } else {
+	if (!(abs(matrix_get_value(m, j, i)) < REAL_EPSILON))
+	  return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool imatrix_is_identity(matrix_t *m)
+{
+  int i, j, n;
+
+  assert(m);
+  assert(matrix_is_imaginary(m));
+  assert(matrix_is_square(m));
+
+  n = matrix_get_columns(m);
+
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      if (i == j) {
+	if (!(abs(imatrix_get_value(m, j, i) - 1.0) < REAL_EPSILON))
+	  return false;
+      } else {
+	if (!(abs(imatrix_get_value(m, j, i)) < REAL_EPSILON))
+	  return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool cmatrix_is_identity(matrix_t *m)
+{
+  int i, j, n;
+
+  assert(m);
+  assert(matrix_is_square(m));
+
+  if (!matrix_is_identity(m))
+    return false;
+
+  if (matrix_is_imaginary(m) &&
+      !imatrix_is_zero(m, 0, 0, matrix_get_columns(m), matrix_get_rows(m)))
+    return false;
+
+  return true;
+}
+
+bool matrix_is_orthogonal(matrix_t *m)
+{
+  bool ret;
+  matrix_t *p, *q;
+
+  assert(m);
+  assert(matrix_is_square(m));
+
+  p = matrix_new_and_copy_matrix_transpose(m);
+  q = matrix_new_and_copy_matrix_multiply_matrix(p, m);
+  if (matrix_is_identity(q)) ret = true;
+  else ret = false;
+
+  matrix_destroy(q);
+  matrix_destroy(p);
+
+  return ret;
+}
+
+bool imatrix_is_orthogonal(matrix_t *m)
+{
+  bool ret;
+  matrix_t *p, *q;
+
+  assert(m);
+  assert(matrix_is_square(m));
+  assert(matrix_is_imaginary(m));
+  
+  p = matrix_new(matrix_get_columns(m), matrix_get_rows(m), false);
+  matrix_copy_imatrix_transpose(p, m);
+
+  q = matrix_new_and_copy_matrix_multiply_imatrix(p, m);
+  if (matrix_is_identity(q)) ret = true;
+  else ret = false;
+
+  matrix_destroy(q);
+  matrix_destroy(p);
+
+  return ret;
+}
+
+bool cmatrix_is_orthogonal(matrix_t *m)
+{
+  bool ret;
+  matrix_t *p, *q;
+
+  assert(m);
+  assert(matrix_is_square(m));
+
+  p = cmatrix_new_and_copy_cmatrix_transpose(m);
+  q = cmatrix_new_and_copy_cmatrix_multiply_cmatrix(p, m);
+  if (cmatrix_is_identity(q)) ret = true;
+  else ret = false;
+
+  matrix_destroy(q);
+  matrix_destroy(p);
+
+  return ret;
+}
+
 #define MATRIX_BEZERO(m, columns, rows, c, r, dc, dr) { \
     int i, j, nc, nr;					\
     real_t *buf;					\
@@ -184,7 +500,7 @@ void cmatrix_fill(matrix_t *m, int c, int r, int dc, int dr, complex_t value)
   imatrix_fill(m, c, r, dc, dr, value.imag);
 }
 
-#define MATRIX_RANDOMLY_FILL(mbuf, mcols, mrows) {	\
+#define MATRIX_FILL_RANDOMLY(mbuf, mcols, mrows) {	\
     int i, j;						\
     assert(mbuf);					\
     for (i = 0; i < mrows; i++)				\
@@ -192,26 +508,26 @@ void cmatrix_fill(matrix_t *m, int c, int r, int dc, int dr, complex_t value)
 	*(mbuf+i*(mcols)+j) = rand() / 1000.0;		\
   }
 
-void matrix_randomly_fill(matrix_t *m)
+void matrix_fill_randomly(matrix_t *m)
 {
-  MATRIX_RANDOMLY_FILL(matrix_get_buffer(m), matrix_get_columns(m), matrix_get_rows(m));
+  MATRIX_FILL_RANDOMLY(matrix_get_buffer(m), matrix_get_columns(m), matrix_get_rows(m));
 }
 
-void imatrix_randomly_fill(matrix_t *m)
+void imatrix_fill_randomly(matrix_t *m)
 {
-  MATRIX_RANDOMLY_FILL(imatrix_get_buffer(m), matrix_get_columns(m), matrix_get_rows(m));
+  MATRIX_FILL_RANDOMLY(imatrix_get_buffer(m), matrix_get_columns(m), matrix_get_rows(m));
 }
 
-void cmatrix_randomly_fill(matrix_t *m)
+void cmatrix_fill_randomly(matrix_t *m)
 {
   assert(m);
 
-  matrix_randomly_fill(m);
+  matrix_fill_randomly(m);
 
   if (!matrix_is_imaginary(m))
     matrix_attach_imaginary(m);
 
-  imatrix_randomly_fill(m);
+  imatrix_fill_randomly(m);
 }
 
 #define MATRIX_TRIM(m, columns, rows, bottom, top) {	\
@@ -345,7 +661,7 @@ int cmatrix_compare_cmatrix(matrix_t *q, matrix_t *p)
 
 void matrix_exchange_row(int i, int j, matrix_t *m)
 {
-  int k, columns, rows;
+  int k, columns;//, rows;
   real_t *qbuf, *pbuf, tmp;
 
   assert(m);
@@ -356,7 +672,7 @@ void matrix_exchange_row(int i, int j, matrix_t *m)
   if (i == j) return;
 
   columns = matrix_get_columns(m);
-  rows = matrix_get_rows(m);
+  //rows = matrix_get_rows(m);
   qbuf = matrix_get_buffer(m) + i * columns;
   pbuf = matrix_get_buffer(m) + j * columns;
   for (k = 0; k < columns; k++) {
@@ -368,7 +684,7 @@ void matrix_exchange_row(int i, int j, matrix_t *m)
 
 void imatrix_exchange_row(int i, int j, matrix_t *m)
 {
-  int k, columns, rows;
+  int k, columns;//, rows;
   real_t *qbuf, *pbuf, tmp;
 
   assert(m);
@@ -380,7 +696,7 @@ void imatrix_exchange_row(int i, int j, matrix_t *m)
   if (i == j) return;
 
   columns = matrix_get_columns(m);
-  rows = matrix_get_rows(m);
+  //rows = matrix_get_rows(m);
   qbuf = imatrix_get_buffer(m) + i * columns;
   pbuf = imatrix_get_buffer(m) + j * columns;
   for (k = 0; k < columns; k++) {
@@ -392,7 +708,7 @@ void imatrix_exchange_row(int i, int j, matrix_t *m)
 
 void cmatrix_exchange_row(int i, int j, matrix_t *m)
 {
-  int k, columns, rows;
+  int k, columns;//, rows;
   real_t *qreal, *qimag, *preal, *pimag, tmp;
 
   assert(m);
@@ -404,7 +720,7 @@ void cmatrix_exchange_row(int i, int j, matrix_t *m)
   if (i == j) return;
 
   columns = matrix_get_columns(m);
-  rows = matrix_get_rows(m);
+  //rows = matrix_get_rows(m);
 
   qreal = matrix_get_buffer(m) + i * columns;
   qimag = imatrix_get_buffer(m) + i * columns;
@@ -544,7 +860,6 @@ matrix_t *imatrix_copy_matrix_transpose(matrix_t *q, matrix_t *p)
 		   matrix_get_buffer(p), matrix_get_columns(p), matrix_get_rows(p));
   return q;
 }
-
 
 matrix_t *imatrix_copy_imatrix_transpose(matrix_t *q, matrix_t *p)
 {
@@ -2435,8 +2750,8 @@ matrix_t *cmatrix_divide_scalar(matrix_t *q, complex_t v)
     assert(dr > 0);							\
     nr = min(r + dr, qrows);						\
     nc = min(c + dc, qcols);						\
-    for (i = 0; i < nr; i++)						\
-      for (j = 0; j < nc; j++)						\
+    for (i = r; i < nr; i++)						\
+      for (j = c; j < nc; j++)						\
 	*(qbuf + i * (qcols) + j) op1 (*(pbuf + i * (pcols) + j)) op2 v; \
   }
 
@@ -2449,8 +2764,8 @@ matrix_t *cmatrix_divide_scalar(matrix_t *q, complex_t v)
     assert(dr > 0);							\
     nr = min(r + dr, qrows);						\
     nc = min(c + dc, qcols);						\
-    for (i = 0; i < nr; i++)						\
-      for (j = 0; j < nc; j++)						\
+    for (i = r; i < nr; i++)						\
+      for (j = c; j < nc; j++)						\
 	*(qbuf + i * (qcols) + j) opcode v;				\
   }
 
@@ -4198,6 +4513,20 @@ matrix_t *matrix_new_and_copy_matrix_multiply_matrix(matrix_t *a, matrix_t *b)
   return c;
 }
 
+matrix_t *matrix_new_and_copy_matrix_multiply_imatrix(matrix_t *a, matrix_t *b)
+{
+  matrix_t *c;
+
+  assert(a);
+  assert(b);
+  assert(matrix_get_columns(a) == matrix_get_rows(b));
+
+  c = matrix_new(matrix_get_columns(b), matrix_get_rows(a), false);
+  matrix_copy_matrix_multiply_imatrix(c, a, b);
+
+  return c;
+}
+
 matrix_t *cmatrix_new_and_copy_cmatrix_multiply_cmatrix(matrix_t *a, matrix_t *b)
 {
   matrix_t *c;
@@ -5731,6 +6060,48 @@ matrix_t *cmatrix_new_and_copy_cvector_multiply_cvector(vector_t *a, vector_t *b
   cmatrix_copy_cvector_multiply_cvector(c, a, b);
 
   return c;
+}
+
+real_t matrix_get_trace(matrix_t *m)
+{
+  int i, n;
+  real_t tr, *buf;
+
+  assert(m);
+  assert(matrix_is_square(m));
+
+  n = matrix_get_columns(m);
+  buf = matrix_get_buffer(m);
+
+  for (tr = 0.0, i = 0; i < n; i++) {
+    tr += *(buf + i);
+    buf += n;
+  }
+
+  return tr;
+}
+
+complex_t cmatrix_get_trace(matrix_t *m)
+{
+  int i, n;
+  real_t *real, *imag;
+  complex_t tr;
+
+  assert(m);
+  assert(matrix_is_square(m));
+  assert(matrix_is_imaginary(m));
+
+  n = matrix_get_columns(m);
+  real = matrix_get_buffer(m);
+  imag = imatrix_get_buffer(m);
+
+  for (tr.real = tr.imag = 0.0, i = 0; i < n; i++) {
+    tr.real += *(real + i);
+    tr.imag += *(imag + i);
+    real += n;
+    imag += n;
+  }
+  return tr;
 }
 
 static void matrix_determinant(real_t *det, matrix_t *mat)

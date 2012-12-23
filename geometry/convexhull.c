@@ -15,6 +15,7 @@
  along with this program; if not, please visit www.gnu.org.
 */
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <malloc.h>
 #include <assert.h>
@@ -24,9 +25,11 @@
 #include <geometry/polygon.h>
 #include <geometry/convexhull.h>
 
+/*
 extern void keyhit(void);
 extern void putline(int x1, int y1, int x2, int y2, int r, int g, int b);
 extern void circle(int x, int y, int radius, int r, int g, int b);
+*/
 
 /* http://www.cs.princeton.edu/~ah/alg_anim/version2/ConvexHull.html */
 /*
@@ -49,103 +52,110 @@ extern void circle(int x, int y, int radius, int r, int g, int b);
   * and has the minimum angle
   * then the convex hull that we want don't be created.
   */
-static int jarvismarch(polygon_t *convexhull, point_list_t *points)
+static int jarvismarch(polygon_t *chull, point_list_t *points)
 {
   real_t ang, dist, ymin;
   real_t amin, dmax, dx, dy;
-  dlink_t *a, *b, *c;
+  dlink_t *x, *y, *ax, *bx;
   point_t *p, *q;
 
-  assert(convexhull);
+  assert(chull);
   assert(points);
-  assert(points->count >= 3);
+  assert(point_list_get_count(points) >= 3);
 
-  // preparing the polygon, and
-  // find the point with minimum value of y-coordinate
-  for (c = NULL, a = points->tail->next; a != points->head; a = a->next) {
-    p = (point_t *)a->object;
-    p->reference++, b = dlink_new(), b->object = (void *)p;
-    dlist_insert(b, (dlist_t *)convexhull);
-    if ((c == NULL) || (p->y < ymin)) { c = b; ymin = p->y; }
+  // Preparing the polygon, and
+  // Find the point with minimum value of y-coordinate
+  for (ax = NULL, x = points->tail->next; x != points->head; x = x->next) {
+    p = (point_t *)x->object;
+    y = dlink_new();
+    point_inc_ref(p);
+    y->object = (void *)p;
+    dlist_insert(y, chull);
+    if (ax == NULL || point_get_y(p) < ymin) {
+      ax = y;
+      ymin = point_get_y(p);
+    }
   }
-  dlink_cutoff(c);
-  convexhull->count--;
-  dlist_push(c, convexhull);
-  point_dump((point_t *)c->object);
-  //printf("n: %d\n", convexhull->count);
+  dlink_cutoff(ax);
+  dlist_dec_count(chull);
+  dlist_push(ax, chull);
+  point_dump((point_t *)ax->object);
 
-  // scan right chain
-  for (a = convexhull->tail->next; a->next != convexhull->head; a = a->next) {
-    p = (point_t *)a->object;
-    for (c = NULL, b = a->next; b != convexhull->head; b = b->next) {
-      q = (point_t *)b->object;
-      dx = q->x - p->x;
-      dy = q->y - p->y;
+  // Scan right chain
+  for (ax = chull->tail->next; ax->next != chull->head; ax = ax->next) {
+    p = (point_t *)ax->object;
+    for (bx = NULL, x = ax->next; x != chull->head; x = x->next) {
+      q = (point_t *)x->object;
+      dx = point_get_x(q) - point_get_x(p);
+      dy = point_get_y(q) - point_get_y(p);
       ang = arctan2r(dy, dx);
       dist = sqrt(sqr(dx) + sqr(dy));
-      // find another vertex with min-angle and max-distance
-      if ((c == NULL) || (ang < amin)) {
-	c = b;
+      // Find another vertex with min-angle and max-distance
+      if (bx == NULL || ang < amin) {
+	bx = x;
 	amin = ang;
 	dmax = dist;
-      } else if ((ang == amin) && (dist > dmax)) {
-	// if the pixel is co-linear with previewous pixel with minimum angle
-	c = b;
+      } else if (ang == amin && dist > dmax) {
+	bx = x;
 	dmax = dist;
       }
     }
-    q = (point_t *)c->object;
-    // right chain complete ?
-    if (q->y < p->y) break;
-    // swapping (coordinations and mark)
-    dlink_cutoff(c);
-    dlink_append(c, a);
-    point_dump((point_t *)c->object);
+    q = (point_t *)bx->object;
+
+    // Right chain complete ?
+    if (point_get_y(q) < point_get_y(p))
+      break;
+
+    // Swapping (coordinations and mark)
+    dlink_cutoff(bx);
+    dlink_append(bx, ax);
+    point_dump((point_t *)bx->object);
   }
   //printf("n: %d\n", convexhull->count);
 
-  // scan left chain
-  for (; a->next != convexhull->head; a = a->next) {
-    p = (point_t *)a->object;
-    for (c = NULL, b = a->next; b != convexhull->head; b = b->next) {
-      q = (point_t *)b->object;
-      dx = p->x - q->x;
-      dy = p->y - q->y;
+  // Scan left chain
+  for (; ax->next != chull->head; ax = ax->next) {
+    p = (point_t *)ax->object;
+    for (bx = NULL, x = ax->next; x != chull->head; x = x->next) {
+      q = (point_t *)x->object;
+      dx = point_get_x(p) - point_get_x(q);
+      dy = point_get_y(p) - point_get_y(q);
       ang = arctan2r(dy, dx);
       dist = sqrt(sqr(dx) + sqr(dy));
-      if ((c == NULL) || (ang < amin)) {
-	c = b;
+      if (bx == NULL || ang < amin) {
+	bx = x;
 	amin = ang;
 	dmax = dist;
-      } else if ((ang == amin) && (dist > dmax)) {
-	c = b;
+      } else if (ang == amin && dist > dmax) {
+	bx = x;
 	dmax = dist;
       }
     }
-    b = convexhull->tail->next;
-    q = (point_t *)b->object;
-    dx = p->x - q->x;
-    dy = p->y - q->y;
+
+    y = chull->tail->next;
+    q = (point_t *)y->object;
+    dx = point_get_x(p) - point_get_x(q);
+    dy = point_get_y(p) - point_get_y(q);
     ang = arctan2r(dy, dx);
-    // convexhull complete ?
+    // Convexhull complete ?
     if (ang < amin) break;
-    // swapping
-    dlink_cutoff(c);
-    dlink_append(c, a);
-    point_dump((point_t *)c->object);
+
+    // Swapping
+    dlink_cutoff(bx);
+    dlink_append(bx, ax);
+    point_dump((point_t *)bx->object);
   }
   //printf("n: %d\n", convexhull->count);
 
-  while (a->next != convexhull->head) {
-    b = a->next;
-    dlink_cutoff(b);
-    convexhull->count--;
-    //((point_t *)b->object)->reference--;
-    point_destroy((point_t *)b->object);
-    dlink_destroy(b);
+  while (ax->next != chull->head) {
+    x = ax->next;
+    dlink_cutoff(x);
+    dlist_dec_count(chull);
+    point_destroy((point_t *)x->object);
+    dlink_destroy(x);
   }
 
-  return convexhull->count;
+  return dlist_get_count(chull);
 }
 
 /* Graham's Scan
@@ -160,52 +170,59 @@ static int jarvismarch(polygon_t *convexhull, point_list_t *points)
  * 3. Build the hull, by marching around the star-shaped poly, adding edges
  *    when we make a left turn, and back-tracking when we make a right turn. 
  */
-static int grahamscan(polygon_t *convexhull, point_list_t *points)
+static int grahamscan(polygon_t *chull, point_list_t *points)
 {
   int i;
   real_t dx, dy, ymin;
   real_t *ang;
   point_t *p, *q;
   point_t *v1, *v2, *v3;
-  dlink_t *a, *b, *c, *temp;
+  dlink_t *ax, *bx, *cx, *x, *y, *tmp;
 	
-  assert(convexhull);
+  assert(chull);
   assert(points);
-  assert(points->count >= 3);
+  assert(point_list_get_count(points) >= 3);
 	
-  ang = (real_t *)malloc(points->count * sizeof(*ang));
+  ang = (real_t *)malloc(point_list_get_count(points) * sizeof(real_t));
   assert(ang);
 
-  // find an extreme point
-  // preparing the polygon, and
-  // find the point with minimum value of y-coordinate
-  for (c = NULL, a = points->tail->next; a != points->head; a = a->next) {
-    p = (point_t *)a->object;
-    p->reference++, b = dlink_new(), b->object = (void *)p;
-    dlist_insert(b, (dlist_t *)convexhull);
-    if ((c == NULL) || (p->y < ymin)) { c = b; ymin = p->y; }
+  // Find an extreme point
+  // Preparing the polygon, and
+  // Find the point with minimum value of y-coordinate
+  for (ax = NULL, x = points->tail->next; x != points->head; x = x->next) {
+    p = (point_t *)x->object;
+    y = dlink_new();
+    point_inc_ref(p);
+    y->object = (void *)p;
+    dlist_insert(y, chull);
+    if (ax == NULL || point_get_y(p) < ymin) {
+      ax = y;
+      ymin = point_get_y(p);
+    }
   }
-  dlink_cutoff(c), convexhull->count--;
-  dlist_push(c, convexhull);
+  dlink_cutoff(ax);
+  dlist_dec_count(chull);
+  dlist_push(ax, chull);
 
-  // sort the points in order of increasing angle about the pivot.
-  p = (point_t *)c->object; i = 0;
+  // Sort the points in order of increasing angle about the pivot.
+  p = (point_t *)ax->object;
   //point_dump(p);
-  for (a = c->next; a != convexhull->head; a = a->next) {
-    q = (point_t *)a->object;
-    dx = q->x - p->x;
-    dy = q->y - p->y;
+  for (i = 0, x = ax->next; x != chull->head; x = x->next) {
+    q = (point_t *)x->object;
+    dx = point_get_x(q) - point_get_x(p);
+    dy = point_get_y(q) - point_get_y(p);
     ang[i] = arctan2r(dy, dx);
-    a->spare = (void *)&ang[i];
+    x->spare = (void *)&(ang[i]);
     i++;
     //point_dump(q);
     //printf("ang: %lf\n", ang[i-1]);
   }
-  for (a = c->next; a->next != convexhull->head; a = a->next) {
-    for (b = a->next; b != convexhull->head; b = b->next) {
-      if (*((real_t *)b->spare) < *((real_t *)a->spare)) {
-	dlink_exchange(a, b);
-	temp = a, a = b, b = temp;
+
+  for (x = ax->next; x->next != chull->head; x = x->next) {
+    for (y = x->next; y != chull->head; y = y->next) {
+      if (*((real_t *)y->spare) < *((real_t *)x->spare)) {
+	dlink_exchange(x, y);
+	tmp = x, x = y, y = tmp;
       }
     }
   }
@@ -214,34 +231,37 @@ static int grahamscan(polygon_t *convexhull, point_list_t *points)
   v1 = point_new();
   v2 = point_new();
   v3 = point_new();
-  c = convexhull->tail->next->next->next;
-  while (c != convexhull->head) {
-    a = c->prev->prev;
-    b = c->prev;
-    point_subtract(v1, (point_t *)a->object, (point_t *)b->object);
-    point_subtract(v2, (point_t *)c->object, (point_t *)b->object);
+
+  cx = chull->tail->next->next->next;
+  while (cx != chull->head) {
+    bx = cx->prev;
+    ax = bx->prev;
+
+    point_subtract(v1, (point_t *)ax->object, (point_t *)bx->object);
+    point_subtract(v2, (point_t *)cx->object, (point_t *)bx->object);
     point_xproduct(v3, v1, v2);
-    // convex ?
-    if (v3->z < 0) {
-      c = c->next;
+
+    // Convex ?
+    if (point_get_z(v3) < 0) {
+      cx = cx->next;
     } else {
-      dlink_cutoff(b);
-      convexhull->count--;
-      //((point_t *)b->object)->reference--
-      point_destroy((point_t *)b->object);
-      dlink_destroy(b);
+      dlink_cutoff(bx);
+      dlist_dec_count(chull);
+      point_destroy((point_t *)bx->object);
+      dlink_destroy(bx);
     }
   }
-  for (a = convexhull->tail->next; a != convexhull->head; a = a->next) {
-    a->spare = NULL;
-  }
+
+  for (x = chull->tail->next; x != chull->head; x = x->next)
+    x->spare = NULL;
+
   point_destroy(v3);
   point_destroy(v2);
   point_destroy(v1);
 
   free(ang);
 
-  return convexhull->count;
+  return dlist_get_count(chull);
 }
 
 /*
@@ -268,86 +288,95 @@ static int grahamscan(polygon_t *convexhull, point_list_t *points)
  */
 static int quickhull_grouping(dlist_t *group)
 {
-  dlink_t *p, *a, *b, *c, *next;
+  dlink_t *x, *ax, *bx, *cx, *next;
   dlist_t *s1, *s2;
   point_t *v1, *v2, *v3;
   real_t area;
 
   assert(group);
 
-  if (group->count <= 2) return group->count;
+  if (dlist_get_count(group) <= 2)
+    return dlist_get_count(group);
 
   v1 = point_new();
   v2 = point_new();
   v3 = point_new();
 
-  // find the point with maximum parallelogram's area
-  a = dlist_pop(group);
-  b = dlist_extract(group);
-  c = NULL;
-  point_subtract(v2, (point_t *)(b->object), (point_t *)(a->object));
-  for (p = group->tail->next; p != group->head; p = p->next) {
-    point_subtract(v1, (point_t *)(p->object), (point_t *)(a->object));
-    point_xproduct(v3, v1, v2);
-    if ((c == NULL) || (v3->z > area)) { c = p; area = v3->z; }
-  }
-  dlink_cutoff(c); group->count--;
+  // Find the point with maximum parallelogram's area
+  ax = dlist_pop(group);
+  bx = dlist_extract(group);
+  cx = NULL;
 
-  // s1 grouping
-  s1 = dlist_new();
-  dlist_insert(a, s1);
-  point_subtract(v2, (point_t *)(c->object), (point_t *)(a->object));
-  for (p = group->tail->next; p != group->head;) {
-    point_subtract(v1, (point_t *)(p->object), (point_t *)(a->object));
+  point_subtract(v2, (point_t *)(bx->object), (point_t *)(ax->object));
+  for (x = group->tail->next; x != group->head; x = x->next) {
+    point_subtract(v1, (point_t *)(x->object), (point_t *)(ax->object));
     point_xproduct(v3, v1, v2);
-    if (v3->z > 0) {
-      next = p->next;
-      dlink_cutoff(p); group->count--;
-      dlist_insert(p, s1);
-      p = next;
-    } else p = p->next;
-  }
-  dlist_insert(c, s1);
-  quickhull_grouping(s1);
-  assert(c == s1->head->prev);
-
-  // s2 grouping and pop out others
-  c = dlist_extract(s1);
-  s2 = dlist_new();
-  dlist_insert(c, s2);
-  point_subtract(v2, (point_t *)b->object, (point_t *)c->object);
-  for (p = group->tail->next; p != group->head;) {
-    point_subtract(v1, (point_t *)p->object, (point_t *)c->object);
-    point_xproduct(v3, v1, v2);
-    if (v3->z > 0) {
-      next = p->next;
-      dlink_cutoff(p); group->count--;
-      dlist_insert(p, s2);
-      p = next;
-    } else {
-      next = p->next;
-      dlink_cutoff(p); group->count--;
-      //((point_t *)p->object)->reference--;
-      point_destroy((point_t *)p->object);
-      dlink_destroy(p);
-      p = next;
+    if (cx == NULL || point_get_z(v3) > area) {
+      cx = x;
+      area = point_get_z(v3);
     }
   }
-  dlist_insert(b, s2);
+  dlink_cutoff(cx);
+  dlist_dec_count(group);
+
+  // S1 grouping
+  s1 = dlist_new();
+  dlist_insert(ax, s1);
+  point_subtract(v2, (point_t *)(cx->object), (point_t *)(ax->object));
+  for (x = group->tail->next; x != group->head; ) {
+    point_subtract(v1, (point_t *)(x->object), (point_t *)(ax->object));
+    point_xproduct(v3, v1, v2);
+    if (point_get_z(v3) > 0) {
+      next = x->next;
+      dlink_cutoff(x);
+      dlist_dec_count(group);
+      dlist_insert(x, s1);
+      x = next;
+    } else x = x->next;
+  }
+  dlist_insert(cx, s1);
+  quickhull_grouping(s1);
+  assert(cx == s1->head->prev);
+
+  // S2 grouping and pop out others
+  cx = dlist_extract(s1);
+  s2 = dlist_new();
+  dlist_insert(cx, s2);
+  point_subtract(v2, (point_t *)bx->object, (point_t *)cx->object);
+  for (x = group->tail->next; x != group->head;) {
+    point_subtract(v1, (point_t *)x->object, (point_t *)cx->object);
+    point_xproduct(v3, v1, v2);
+    if (point_get_z(v3) > 0) {
+      next = x->next;
+      dlink_cutoff(x);
+      dlist_dec_count(group);
+      dlist_insert(x, s2);
+      x = next;
+    } else {
+      next = x->next;
+      dlink_cutoff(x);
+      dlist_dec_count(group);
+      point_destroy((point_t *)x->object);
+      dlink_destroy(x);
+      x = next;
+    }
+  }
+  dlist_insert(bx, s2);
   quickhull_grouping(s2);
-  assert(b == s2->head->prev);
+  assert(bx == s2->head->prev);
 
-  assert(group->count == 0);
+  assert(dlist_get_count(group) == 0);
+  //assert(group->count == 0);
 
-  // merge s1 and s2 into group
-  while (s1->count) {
-    p = dlist_pop(s1);
-    dlist_insert(p, group);
+  // Merge s1 and s2 into group
+  while (dlist_get_count(s1) > 0) {
+    x = dlist_pop(s1);
+    dlist_insert(x, group);
   }
 
-  while (s2->count) {
-    p = dlist_pop(s2);
-    dlist_insert(p, group);
+  while (dlist_get_count(s2) > 0) {
+    x = dlist_pop(s2);
+    dlist_insert(x, group);
   }
 
   dlist_destroy(s2);
@@ -357,152 +386,184 @@ static int quickhull_grouping(dlist_t *group)
   point_destroy(v2);
   point_destroy(v1);
 
-  return group->count;
+  return dlist_get_count(group);
 }
 
-static int quickhull(polygon_t *convexhull, point_list_t *points)
+static int quickhull(polygon_t *chull, point_list_t *points)
 {
-  real_t ymin, ymax, y;
+  real_t ymin, ymax, yval;
   point_t *p, *v1, *v2, *v3;
-  dlink_t *a, *b, *c, *next;
-  dlist_t *right, *left;
+  dlink_t *ax, *bx, *x, *y, *next;
+  dlist_t *right_group, *left_group;
 
-  assert(convexhull);
+  assert(chull);
   assert(points);
 
-  // allocate the structure element of convex hull
-  for (a = points->tail->next; a != points->head; a = a->next) {
-    p = (point_t *)a->object;
-    p->reference++;
-    b = dlink_new();
-    b->object = (void *)p;
-    dlist_insert(b, convexhull);
+  // Allocate the structure element of convex hull
+  for (x = points->tail->next; x != points->head; x = x->next) {
+    p = (point_t *)x->object;
+    point_inc_ref(p);
+    y = dlink_new();
+    y->object = (void *)p;
+    dlist_insert(y, chull);
   }
 
   // find the extreme points along y-axis
-  a = NULL;
-  b = NULL;
-  for (c = convexhull->tail->next; c != convexhull->head; c = c->next) {
-    y = ((point_t *)(c->object))->y;
-    if ((a == NULL) || (y < ymin)) { a = c; ymin = y; }
-    if ((b == NULL) || (y > ymax)) { b = c; ymax = y; }
+  ax = NULL;
+  bx = NULL;
+  for (x = chull->tail->next; x != chull->head; x = x->next) {
+    yval = point_get_y((point_t *)(x->object));
+    if (ax == NULL || yval < ymin) {
+      ax = x;
+      ymin = yval;
+    }
+    if (bx == NULL || yval > ymax) {
+      bx = x;
+      ymax = yval;
+    }
   }
-  dlink_cutoff(a); convexhull->count--;
-  dlink_cutoff(b); convexhull->count--;
-  //point_dump((point_t *)a->object);
-  //point_dump((point_t *)b->object);
+  dlink_cutoff(ax);
+  dlist_dec_count(chull);
+  dlink_cutoff(bx);
+  dlist_dec_count(chull);
+  //point_dump((point_t *)ax->object);
+  //point_dump((point_t *)bx->object);
 
   v1 = point_new();
   v2 = point_new();
   v3 = point_new();
 
   //printf("for right section\n");
-  right = dlist_new();
-  dlist_insert(a, right);
-  point_subtract(v2, (point_t *)b->object, (point_t *)a->object);
-  for (c = convexhull->tail->next; c != convexhull->head;) {
-    //point_dump((point_t *)c->object);
-    point_subtract(v1, (point_t *)c->object, (point_t *)a->object);
+  right_group= dlist_new();
+  dlist_insert(ax, right_group);
+  point_subtract(v2, (point_t *)bx->object, (point_t *)ax->object);
+  for (x = chull->tail->next; x != chull->head;) {
+    //point_dump((point_t *)x->object);
+    point_subtract(v1, (point_t *)x->object, (point_t *)ax->object);
     point_xproduct(v3, v1, v2);
-    if (v3->z > 0) {
-      next = c->next;
-      dlink_cutoff(c); convexhull->count--;
-      dlist_insert(c, right);
+    if (point_get_z(v3) > 0) {
+      next = x->next;
+      dlink_cutoff(x);
+      dlist_dec_count(chull);
+      dlist_insert(x, right_group);
       //printf(" ");
-      //point_dump((point_t *)c->object);
-      c = next;
-    } else c = c->next;
+      //point_dump((point_t *)x->object);
+      x = next;
+    } else x = x->next;
   }
-  dlist_insert(b, right);
-  quickhull_grouping(right);
+  dlist_insert(bx, right_group);
+  quickhull_grouping(right_group);
 
   //printf("for left section\n");
-  a = dlist_pop(right);
-  b = dlist_extract(right);
-  //point_dump((point_t *)a->object);
-  //point_dump((point_t *)b->object);
+  ax = dlist_pop(right_group);
+  bx = dlist_extract(right_group);
+  //point_dump((point_t *)ax->object);
+  //point_dump((point_t *)bx->object);
 
-  left = dlist_new();
-  dlist_insert(b, left);
-  point_subtract(v2, (point_t *)a->object, (point_t *)b->object);
-  for (c = convexhull->tail->next; c != convexhull->head;) {
-    point_subtract(v1, (point_t *)c->object, (point_t *)b->object);
+  left_group = dlist_new();
+  dlist_insert(bx, left_group);
+  point_subtract(v2, (point_t *)ax->object, (point_t *)bx->object);
+  for (x = chull->tail->next; x != chull->head; ) {
+    point_subtract(v1, (point_t *)x->object, (point_t *)bx->object);
     point_xproduct(v3, v1, v2);
-    if (v3->z > 0) {
-      next = c->next;
-      dlink_cutoff(c); convexhull->count--;
-      dlist_insert(c, left);
-      //point_dump((point_t *)c->object);
-      c = next;
+    if (point_get_z(v3) > 0) {
+      next = x->next;
+      dlink_cutoff(x);
+      dlist_dec_count(chull);
+      dlist_insert(x, left_group);
+      //point_dump((point_t *)x->object);
+      x = next;
     } else {
-      next = c->next;
-      dlink_cutoff(c); convexhull->count--;
-      point_destroy((point_t *)c->object);
-      dlink_destroy(c);
-      c = next;
+      next = x->next;
+      dlink_cutoff(x);
+      dlist_dec_count(chull);
+      point_destroy((point_t *)x->object);
+      dlink_destroy(x);
+      x = next;
     }
   }
-  dlist_insert(a, left);
-  quickhull_grouping(left);
+  dlist_insert(ax, left_group);
+  quickhull_grouping(left_group);
 
-  a = dlist_extract(left);
-  b = dlist_pop(left);
+  ax = dlist_extract(left_group);
+  bx = dlist_pop(left_group);
 
-  dlist_insert(a, convexhull);
-  while (right->count) {
-    c = dlist_pop(right);
-    dlist_insert(c, convexhull);
+  dlist_insert(ax, chull);
+  while (dlist_get_count(right_group) > 0) {
+    x = dlist_pop(right_group);
+    dlist_insert(x, chull);
   }
-  dlist_insert(b, convexhull);
-  while (left->count) {
-    c = dlist_pop(left);
-    dlist_insert(c, convexhull);
+  dlist_insert(bx, chull);
+
+  while (dlist_get_count(left_group) > 0) {
+    x = dlist_pop(left_group);
+    dlist_insert(x, chull);
   }
 
-  dlist_destroy(left);
-  dlist_destroy(right);
+  dlist_destroy(left_group);
+  dlist_destroy(right_group);
 
   point_destroy(v3);
   point_destroy(v2);
   point_destroy(v1);
 
-  return convexhull->count;
+  return dlist_get_count(chull);
 }
 
-int convexhull_compute(polygon_t *convexhull, point_list_t *points, convexhull_method_t way)
+int convexhulling(polygon_t *chull, point_list_t *points, convexhull_method_t way)
 {
-  int ret;
+  int cnt;
 
-  assert(convexhull);
+  assert(chull);
   assert(points);
-  assert(points->count >= 3);
+  assert(point_list_get_count(points));
 
   switch (way) {
-  case JAVIS_MARCH:
-    ret = jarvismarch(convexhull, points);
-    break;
-  case GRAHAM_SCAN:
-    ret = grahamscan(convexhull, points);
-    break;
-  case QUICK_HULL:
-    ret = quickhull(convexhull, points);
-    break;
+  case JAVIS_MARCH: cnt = jarvismarch(chull, points); break;
+  case GRAHAM_SCAN: cnt = grahamscan(chull, points); break;
+  case QUICK_HULL: cnt = quickhull(chull, points); break;
+  default: abort(); break;
   }
-  return ret;
+
+  return cnt;
 }
 
 static real_t distance_from_point_to_line(point_t *p, line_t *line)
 {
-  real_t dist;
-  point_t *q, *r;
+  real_t len, dist;
+  //point_t *q, *r;
+  point_t a, b;
 
   assert(p);
   assert(line);
-  q = line->a;
-  r = line->b;
-  dist = (abs((r->x - q->x) * (q->y - p->y) - (q->x - p->x) * (r->y - q->y)) /
-	  (sqrt(sqr(r->x - q->x) + sqr(r->y - q->y))));
-  return dist;
+
+  switch (line->form_type) {
+  case LINE_BY_ENDPOINTS:
+    point_copy(&a, line_get_a(line));
+    point_copy(&b, line_get_b(line));
+    break;
+  case LINE_BY_ENDPOINT_DIRECTION:
+    point_copy(&a, line_get_a(line));
+    point_add(&b, line_get_a(line), line_get_b(line));
+    break;
+  case LINE_BY_POSITION_DIRECTION:
+    point_copy(&a, line_get_a(line));
+    point_add(&b, line_get_a(line), line_get_b(line));
+    break;
+  default:
+    abort();
+    break;
+  }
+
+  len = sqrt(sqr(point_get_x(&b) - point_get_x(&a)) +
+	     sqr(point_get_y(&b) - point_get_y(&a)));
+
+  dist = abs((point_get_x(&b) - point_get_x(&a)) *
+	     (point_get_y(&a) - point_get_y(p)) -
+	     (point_get_x(&a) - point_get_x(p)) *
+	     (point_get_y(&b) - point_get_y(&a)));
+
+  return dist / len;
 }
 
 /* http://valis.cs.uiuc.edu/~sariel/research/CG/applets/bounding_rectangle/main.html */
@@ -522,134 +583,153 @@ static real_t distance_from_point_to_line(point_t *p, line_t *line)
  *    which changes the pair of antipodal points that are defined by the lines.
  * 3. We finish when we complete a whole round.
  */
-real_t convexhull_diameter(line_t *diameter, polygon_t *convexhull)
+real_t convexhull_compute_diameter(line_t *diameter, polygon_t *chull)
 {
   int i;
   real_t *ang, dist, temp, rotate;
   real_t alpha, beta, da, db, xmin, xmax;
-  dlink_t *a, *b, *c, *left, *right;
-  point_t *p, *q;
+  dlink_t *ax, *bx, *cx, *x, *lx, *rx;
+  point_t *a, *b, *p, *q;
 
   assert(diameter);
-  assert(convexhull);
-  assert(convexhull->count >= 3);
+  assert(chull);
+  assert(polygon_get_count(chull) >= 3);
 
-  ang = (real_t *)malloc(convexhull->count * sizeof(*ang));
+  ang = (real_t *)malloc(polygon_get_count(chull) * sizeof(real_t));
+  assert(ang);
 
-  // find the angle between verteces
+  // Find the angle between verteces
   i = 0;
-  a = convexhull->head->prev;
-  b = convexhull->tail->next;
+  ax = chull->head->prev;
+  bx = chull->tail->next;
   do {
-    p = (point_t *)a->object;
-    q = (point_t *)b->object;
-    ang[i] = arctan2r(q->y - p->y, q->x - p->x);
-    ang[i] = ang[i] > M_PI ? ang[i]-M_PI : ang[i];
-    a->spare = (void *)&ang[i];
-    printf("(%lf,%lf)->(%lf,%lf):%lf\n", p->x, p->y, q->x, q->y, ang[i] * 180 / M_PI);
+    a = (point_t *)ax->object;
+    b = (point_t *)bx->object;
+    ang[i] = arctan2r(point_get_y(b) - point_get_y(a),
+		      point_get_x(b) - point_get_x(a));
+    ang[i] = ang[i] > M_PI ? ang[i] - M_PI : ang[i];
+    ax->spare = (void *)&ang[i];
+    printf("(%lf,%lf) -> (%lf,%lf) < %lf deg\n",
+	   point_get_x(a), point_get_y(a),
+	   point_get_x(b), point_get_y(b),
+	   ang[i] * 180 / M_PI);
     i++;
-    a = b;
-    b = b->next;
-  } while (b != convexhull->head);
+    ax = bx;
+    bx = bx->next;
+  } while (bx != chull->head);
   printf("Initialized the angle between verteces\n");
 
-  // find the most left and right point
-  left = NULL;
-  right = NULL;
-  for (c = convexhull->tail->next; c != convexhull->head; c = c->next) {
-    p = (point_t *)c->object;
-    if ((left == NULL) || (p->x < xmin)) { left = c; xmin = p->x; }
-    if ((right == NULL) || (p->x > xmax)) { right = c; xmax = p->x; }
+  // Find the most left and right point
+  lx = NULL;
+  rx = NULL;
+  for (x = chull->tail->next; x != chull->head; x = x->next) {
+    p = (point_t *)x->object;
+    if (lx == NULL || point_get_x(p) < xmin) {
+      lx = x;
+      xmin = point_get_x(p);
+    }
+    if (rx == NULL || point_get_x(p) > xmax) {
+      rx = x;
+      xmax = point_get_x(p);
+    }
   }
   printf("Founded the leftmost and rightmost points\n");
 
-  a = left; b = right; dist = 0; p = NULL; q = NULL;
-  rotate = M_PI/2;
+  ax = lx;
+  bx = rx;
+  dist = 0;
+  rotate = M_PI_2;
 
   do {
-    printf("a: (%lf,%lf) -> b: (%lf,%lf)\n", ((point_t *)a->object)->x, ((point_t *)a->object)->y, ((point_t *)b->object)->x, ((point_t *)b->object)->y);
+    a = (point_t *)ax->object;
+    b = (point_t *)bx->object;
 
-    temp = distance_between_points((point_t *)a->object, (point_t *)b->object);
+    printf("a: (%lf,%lf) -> b: (%lf,%lf)\n",
+	   point_get_x(a), point_get_y(a),
+	   point_get_x(b), point_get_y(b));
+
+    temp = get_distance_of_p2p(a, b);
     if (temp > dist) {
-      p = (point_t *)a->object;
-      q = (point_t *)b->object;
       dist = temp;
+      p = a;
+      q = b;
     }
 
-    alpha = *((real_t *)a->spare);
-    beta = *((real_t *)b->spare);
-    /*
-    printf("rotate: %lf, alpha: %lf, beta: %lf\n", rotate*180/M_PI, alpha*180/M_PI, beta*180/M_PI);
+    alpha = *((real_t *)ax->spare);
+    beta = *((real_t *)bx->spare);
 
-    circle(((point_t *)a->object)->x, ((point_t *)a->object)->y, 10, 255, 0, 0);
-    circle(((point_t *)b->object)->x, ((point_t *)b->object)->y, 10, 255, 0, 0);
-    keyhit();
-    circle(((point_t *)a->object)->x, ((point_t *)a->object)->y, 10, 0, 0, 0);
-    circle(((point_t *)b->object)->x, ((point_t *)b->object)->y, 10, 0, 0, 0);
-    */
     if (alpha >= rotate) da = alpha - rotate;
     else da = M_PI + alpha - rotate;
+
     if (beta >= rotate) db = beta - rotate;
     else db = M_PI + beta - rotate;
 
     if (da < db) {
       rotate = alpha;
-      if (a->next == convexhull->head) a = convexhull->tail->next;
-      else a = a->next;
+      if (ax->next == chull->head) ax = chull->tail->next;
+      else ax = ax->next;
     } else {
       rotate = beta;
-      if (b->next == convexhull->head) b = convexhull->tail->next;
-      else b = b->next;
+      if (bx->next == chull->head) bx = chull->tail->next;
+      else bx = bx->next;
     }
-  } while (!(((a == right) && (b == left)) || ((b == right) && (a == left))));
+  } while (!((ax == rx && bx == lx) || (bx == rx && ax == lx)));
 
-  for (c = convexhull->tail->next; c != convexhull->head; c = c->next) {
-    c->spare = NULL;
-  }
+  for (x = chull->tail->next; x != chull->head; x = x->next)
+    x->spare = NULL;
 
-  line_assign(diameter, p, q);
+  line_set_endpoints(diameter, p, q);
 
   free(ang);
 
   return dist;
 }
 
-real_t convexhull_weak_diameter(line_t *diameter, polygon_t *convexhull)
+real_t convexhull_compute_weak_diameter(line_t *diameter, polygon_t *chull)
 {
   real_t low, high, dist;
   real_t temp, temp1, temp2, temp3, temp4;
-  dlink_t *a, *b;
-  dlink_t *prev_a, *next_b;
-  point_t *p, *q, *r, *u, *v;
+  dlink_t *ax, *bx, *ax_prev, *bx_next;
+  point_t *a, *b, p, *u, *v, *r;
 
   assert(diameter);
-  assert(convexhull);
+  assert(chull);
 
   r = point_new();
   u = NULL;
   v = NULL;
   dist = 0;
-  for (a = convexhull->tail->next; a->next != convexhull->head; a = a->next) {
-    if (a->prev == convexhull->tail) prev_a = convexhull->head->prev;
-    else prev_a = a->prev;
-    p = (point_t *)a->object;
-    for (b = a->next; b != convexhull->head; b = b->next) {
-      if (b->next == convexhull->head) next_b = convexhull->tail->next;
-      else next_b = b->next;
-      q = (point_t *)b->object;
-      point_subtract(r, q, p);
-      low = point_dotproduct(p, r);
-      high = point_dotproduct(q, r);
-      if (low > high) { temp = low; low = high; high = temp; }
-      temp1 = point_dotproduct((point_t *)a->next->object, r);
-      temp2 = point_dotproduct((point_t *)prev_a->object, r);
-      temp3 = point_dotproduct((point_t *)next_b->object, r);
-      temp4 = point_dotproduct((point_t *)b->prev->object, r);
-      if (((low <= temp1) && (temp1 <= high)) &&
-	  ((low <= temp2) && (temp2 <= high)) &&
-	  ((low <= temp3) && (temp3 <= high)) &&
-	  ((low <= temp4) && (temp4 <= high))) {
-	temp = distance_between_points(p, q);
+
+  for (ax = chull->tail->next; ax->next != chull->head; ax = ax->next) {
+    if (ax->prev == chull->tail) ax_prev = chull->head->prev;
+    else ax_prev = ax->prev;
+    a = (point_t *)ax->object;
+
+    for (bx = ax->next; bx != chull->head; bx = bx->next) {
+      if (bx->next == chull->head) bx_next = chull->tail->next;
+      else bx_next = bx->next;
+      b = (point_t *)bx->object;
+
+      point_subtract(&p, b, a);
+      low = point_dotproduct(a, &p);
+      high = point_dotproduct(b, &p);
+
+      if (low > high) {
+	temp = low;
+	low = high;
+	high = temp;
+      }
+
+      temp1 = point_dotproduct((point_t *)ax->next->object, &p);
+      temp2 = point_dotproduct((point_t *)ax_prev->object, &p);
+      temp3 = point_dotproduct((point_t *)bx_next->object, &p);
+      temp4 = point_dotproduct((point_t *)bx->prev->object, &p);
+
+      if ((low <= temp1 && temp1 <= high) &&
+	  (low <= temp2 && temp2 <= high) &&
+	  (low <= temp3 && temp3 <= high) &&
+	  (low <= temp4 && temp4 <= high)) {
+	temp = get_distance_of_p2p(a, b);
 	/*
 	circle(p->x, p->y, 10, 255, 0, 0);
 	circle(q->x, q->y, 10, 255, 0, 0);
@@ -658,15 +738,15 @@ real_t convexhull_weak_diameter(line_t *diameter, polygon_t *convexhull)
 	circle(q->x, q->y, 10, 0, 0, 0);
 	*/
 	if (temp > dist) {
-	  u = p; v = q;
+	  u = a; v = b;
 	  dist = temp;
 	}
       }
     }
   }
-  line_assign(diameter, u, v);
-  //line_list_destroy(line_list);
-  point_destroy(r);
+
+  line_set_endpoints(diameter, u, v);
+
   return dist;
 }
 
@@ -688,66 +768,91 @@ real_t convexhull_weak_diameter(line_t *diameter, polygon_t *convexhull)
  *    we rotate the two parallel lines in the angle that
  *    move one line to lie on a new edge. 
  */
-real_t convexhull_min_width(line_t *width, polygon_t *convexhull)
+real_t convexhull_compute_min_width(line_t *width, polygon_t *chull)
 {
   int i;
-  real_t *ang, dist, temp, rotate;
+  real_t *ang, dist, value, rotate;
   real_t da, db, alpha, beta, xmin, xmax;
-  dlink_t *a, *next_a;
-  dlink_t *b, *next_b;
-  dlink_t *c, *left, *right;
-  point_t *p, *q;
+  dlink_t *ax, *ax_next;
+  dlink_t *bx, *bx_next;
+  dlink_t *x, *lx, *rx;
+  point_t *a, *b, *p, *q;
   line_t *line;
 
   assert(width);
-  assert(convexhull);
-  assert(convexhull->count >= 3);
+  assert(chull);
+  assert(polygon_get_count(chull) >= 3);
 
-  ang = (real_t *)malloc(convexhull->count * sizeof(*ang));
+  ang = (real_t *)malloc(polygon_get_count(chull) * sizeof(real_t));
+  assert(ang);
 
-  // find the angle between verteces
+  // Find the angle between verteces
   i = 0;
-  a = convexhull->head->prev;
-  b = convexhull->tail->next;
+  ax = chull->head->prev;
+  bx = chull->tail->next;
   do {
-    p = (point_t *)a->object;
-    q = (point_t *)b->object;
-    ang[i] = arctan2r(q->y - p->y, q->x - p->x);
-    ang[i] = ang[i] > M_PI ? ang[i]-M_PI : ang[i];
-    a->spare = (void *)&ang[i];
-    printf("(%lf,%lf)->(%lf,%lf):%lf\n", p->x, p->y, q->x, q->y, ang[i] * 180 / M_PI);
+    a = (point_t *)ax->object;
+    b = (point_t *)bx->object;
+
+    ang[i] = arctan2r(point_get_y(b) - point_get_y(a),
+		      point_get_x(b) - point_get_x(a));
+    ang[i] = ang[i] > M_PI ? ang[i] - M_PI : ang[i];
+
+    ax->spare = (void *)&ang[i];
+    printf("(%lf,%lf) -> (%lf,%lf) < %lf deg\n",
+	   point_get_x(a), point_get_y(a),
+	   point_get_x(b), point_get_y(b),
+	   ang[i] * 180 / M_PI);
+
     i++;
-    a = b;
-    b = b->next;
-  } while (b != convexhull->head);
+    ax = bx;
+    bx = bx->next;
+  } while (bx != chull->head);
   printf("Initialized the angle between verteces\n");
 
-  // find the most left and right point
-  left = NULL;
-  right = NULL;
-  for (c = convexhull->tail->next; c != convexhull->head; c = c->next) {
-    p = (point_t *)c->object;
-    if ((left == NULL) || (p->x < xmin)) { left = c; xmin = p->x; }
-    if ((right == NULL) || (p->x > xmax)) { right = c; xmax = p->x; }
+  // Find the most left and right point
+  lx = NULL;
+  rx = NULL;
+  for (x = chull->tail->next; x != chull->head; x = x->next) {
+    p = (point_t *)x->object;
+    if (lx == NULL || point_get_x(p) < xmin) {
+      lx = x;
+      xmin = point_get_x(p);
+    }
+    if (rx == NULL || point_get_x(p) > xmax) {
+      rx = x;
+      xmax = point_get_x(p);
+    }
   }
   printf("Founded the leftmost and rightmost points\n");
 
-  a = left; b = right; dist = 0; p = NULL; q = NULL;
-  rotate = M_PI / 2;
-  do {
-    printf("a: (%lf,%lf) -> b: (%lf,%lf)\n", ((point_t *)a->object)->x, ((point_t *)a->object)->y, ((point_t *)b->object)->x, ((point_t *)b->object)->y);
+  ax = lx;
+  bx = rx;
+  dist = 0.0;
+  p = NULL;
+  q = NULL;
+  rotate = M_PI_2; // pi / 2;
+  line = line_new();
 
-    temp = distance_between_points((point_t *)a->object, (point_t *)b->object);
-    if ((p == NULL) || (q == NULL) || (temp < dist)) {
-      p = (point_t *)a->object;
-      q = (point_t *)b->object;
-      dist = temp;
+  do {
+    a = (point_t *)ax->object;
+    b = (point_t *)bx->object;
+    printf("(%lf,%lf) -> (%lf,%lf)\n",
+	   point_get_x(a), point_get_y(a),
+	   point_get_x(b), point_get_y(b));
+
+    value = get_distance_of_p2p(a, b);
+    if (p == NULL || q == NULL || value < dist) {
+      p = a;
+      q = b;
+      dist = value;
     }
 
-    alpha = *((real_t *)a->spare);
-    beta = *((real_t *)b->spare);
+    alpha = *((real_t *)ax->spare);
+    beta = *((real_t *)bx->spare);
 
-    printf("rotate: %lf, alpha: %lf, beta: %lf\n", rotate*180/M_PI, alpha*180/M_PI, beta*180/M_PI);
+    printf("rotate: %lf, alpha: %lf, beta: %lf\n",
+	   rotate * 180 / M_PI, alpha * 180 / M_PI, beta * 180 / M_PI);
     /*
     circle(((point_t *)a->object)->x, ((point_t *)a->object)->y, 10, 255, 0, 0);
     circle(((point_t *)b->object)->x, ((point_t *)b->object)->y, 10, 255, 0, 0);
@@ -755,47 +860,69 @@ real_t convexhull_min_width(line_t *width, polygon_t *convexhull)
     circle(((point_t *)a->object)->x, ((point_t *)a->object)->y, 10, 0, 0, 0);
     circle(((point_t *)b->object)->x, ((point_t *)b->object)->y, 10, 0, 0, 0);
     */
+
+    // Make alpha and beta in the range of acute angle
     if (alpha >= rotate) da = alpha - rotate;
     else da = M_PI + alpha - rotate;
+
     if (beta >= rotate) db = beta - rotate;
     else db = M_PI + beta - rotate;
 
     if (da < db) {
       rotate = alpha;
-      if (a->next == convexhull->head) next_a = convexhull->tail->next;
-      else next_a = a->next;
-      line = line_new_and_assign((point_t *)a->object, (point_t *)next_a->object);
-      temp = distance_from_point_to_line((point_t *)b->object, line);
-      if ((p == NULL) || (q == NULL) || (temp < dist)) {
-	p = (point_t *)a->object; q = (point_t *)b->object;
-	dist = temp;
+      if (ax->next == chull->head) ax_next = chull->tail->next;
+      else ax_next -= ax->next;
+
+      line_set_endpoints(line, a, (point_t *)ax_next->object);
+
+      value = distance_from_point_to_line(b, line);
+      if (p == NULL || q == NULL || value < dist) {
+	p = a;
+	q = b;
+	dist = value;
       }
-      line_destroy(line);
-      a = next_a;
+      line_clear(line);
+      ax = ax_next;
     } else {
       rotate = beta;
-      if (b->next == convexhull->head) next_b = convexhull->tail->next;
-      else next_b = b->next;
-      line = line_new_and_assign((point_t *)b->object, (point_t *)next_b->object);
-      temp = distance_from_point_to_line((point_t *)a->object, line);
-      if ((p == NULL) || (q == NULL) || (temp < dist)) {
-	p = (point_t *)b->object; q = (point_t *)a->object;
-	dist = temp;
+      if (bx->next == chull->head) bx_next = chull->tail->next;
+      else bx_next = bx->next;
+      
+      line_set_endpoints(line, b, (point_t *)bx_next->object);
+      
+      value = distance_from_point_to_line(a, line);
+      if (p == NULL || q == NULL || value < dist) {
+	p = b;
+	q = a;
+	dist = value;
       }
-      line_destroy(line);
-      b = next_b;
+      line_clear(line);
+      bx = bx_next;
     }
-  } while (!(((a == right) && (b == left)) || ((b == right) && (a == left))));
+  } while (!((ax == rx && bx == lx) || (bx == rx && ax == lx)));
 
-  for (c = convexhull->tail->next; c != convexhull->head; c = c->next) {
-    c->spare = NULL;
-  }
+  for (x = chull->tail->next; x != chull->head; x = x->next)
+    x->spare = NULL;
 
-  line_assign(width, p, q);
+  line_set_endpoints(width, p, q);
+  //line_assign(width, p, q);
 
   free(ang);
 
   return dist;
+}
+
+static void convexhull_delete_circumference_rectangles(dlist_t *circumrects)
+{
+  dlink_t *a;
+
+  assert(circumrects);
+
+  while (circumrects->count > 0) {
+    a = dlist_extract(circumrects);
+    polygon_destroy((polygon_t *)a->object);
+    dlink_destroy(a);
+  }
 }
 
 /*
@@ -812,7 +939,7 @@ real_t convexhull_min_width(line_t *width, polygon_t *convexhull)
  * The first rect will lie on the most right, most left, most up and most down points. 
  * For each rect we'll calculate the area and the circumference. This way we can find the minimum.
  */
-static void convexhull_create_circumference_rectangles(dlist_t *circumrects, polygon_t *convexhull)
+static void convexhull_create_circumference_rectangles(dlist_t *circumrects, polygon_t *chull)
 {
   int i, irotate;
   real_t *angle, rectangle[4], delta;
@@ -821,77 +948,92 @@ static void convexhull_create_circumference_rectangles(dlist_t *circumrects, pol
   point_t *p, *q, *r, *s;
   dlink_t *left, *right, *top, *bottom;
   dlink_t *cross_vertex[4], *start, *pivot, *pivot_next;
-  dlink_t *a, *b;
+  dlink_t *ax, *bx;
   polygon_t *rect;
 
   assert(circumrects);
-  assert(convexhull);
-  assert(convexhull->count >= 4);
+  assert(chull);
+  assert(polygon_get_count(chull) >= 3);
 
   // Finding angle of edge of convexhull
-  angle = (real_t *)malloc(convexhull->count * sizeof(*angle));
+  angle = (real_t *)malloc(polygon_get_count(chull) * sizeof(real_t));
+  assert(angle);
 
   i = 0;
-  a = convexhull->head->prev; b = convexhull->tail->next;
+  ax = chull->head->prev;
+  bx = chull->tail->next;
   do {
-    p = (point_t *)a->object;
-    q = (point_t *)b->object;
-    angle[i] = arctan2r(q->y - p->y, q->x - p->x);
+    p = (point_t *)ax->object;
+    q = (point_t *)bx->object;
+    angle[i] = arctan2r(point_get_y(q) - point_get_y(p),
+			point_get_x(q) - point_get_x(p));
     //angle[i] = angle[i] > M_PI ? angle[i]-M_PI : angle[i];
-    a->spare = (void *)&angle[i];
-    printf("(%lf,%lf)->(%lf,%lf):%lf\n", p->x, p->y, q->x, q->y, angle[i] * 180 / M_PI);
+    ax->spare = (void *)&angle[i];
+    printf("(%lf,%lf)->(%lf,%lf):%lf\n",
+	   point_get_x(p), point_get_y(p),
+	   point_get_x(q), point_get_y(q),
+	   angle[i] * 180 / M_PI);
     i++;
-    a = b;
-    b = b->next;
-  } while (b != convexhull->head);
+    ax = bx;
+    bx = bx->next;
+  } while (bx != chull->head);
   printf("Initialized the angle between verteces\n");
   
   // Finding four extreme points
-  left = NULL; right = NULL; top = NULL; bottom = NULL;
-  for (a = convexhull->tail->next; a != convexhull->head; a = a->next) {
-    p = (point_t *)a->object;
-    if ((left == NULL) || (p->x < xmin)) { left = a; xmin = p->x; }
-    if ((right == NULL) || (p->x > xmax)) { right = a; xmax = p->x; }
-    if ((bottom == NULL) || (p->y < ymin)) { bottom = a; ymin = p->y; }
-    if ((top == NULL) || (p->y > ymax)) { top = a; ymax = p->y; }
+  left = NULL;
+  right = NULL;
+  top = NULL;
+  bottom = NULL;
+  for (ax = chull->tail->next; ax != chull->head; ax = ax->next) {
+    p = (point_t *)ax->object;
+    if (left == NULL || point_get_x(p) < xmin) {
+      left = ax;
+      xmin = point_get_x(p);
+    }
+    if (right == NULL || point_get_x(p) > xmax) {
+      right = ax;
+      xmax = point_get_x(p);
+    }
+    if (bottom == NULL || point_get_y(p) < ymin) {
+      bottom = ax;
+      ymin = point_get_y(p);
+    }
+    if (top == NULL || point_get_y(p) > ymax) {
+      top = ax;
+      ymax = point_get_y(p);
+    }
   }
   cross_vertex[0] = bottom;
   cross_vertex[1] = right;
   cross_vertex[2] = top;
   cross_vertex[3] = left;
-
   area = (xmax - xmin) * (ymax - ymin);
 
   // Forming the starting rectangle from four extreme points
   rect = polygon_new();
-  polygon_insert(point_new_and_assign(xmin, ymin, 0), rect);
-  polygon_insert(point_new_and_assign(xmax, ymin, 0), rect);
-  polygon_insert(point_new_and_assign(xmax, ymax, 0), rect);
-  polygon_insert(point_new_and_assign(xmin, ymax, 0), rect);
+  polygon_insert(point_new_and_set(xmin, ymin, 0), rect);
+  polygon_insert(point_new_and_set(xmax, ymin, 0), rect);
+  polygon_insert(point_new_and_set(xmax, ymax, 0), rect);
+  polygon_insert(point_new_and_set(xmin, ymax, 0), rect);
 
   // Angle of four edge of the starting rectangle
   rectangle[0] = 0;
-  rectangle[1] = M_PI / 2;
+  rectangle[1] = M_PI_2;
   rectangle[2] = M_PI;
-  rectangle[3] = 3 * M_PI / 2;
-  for (i = 0, a = rect->tail->next; a != rect->head; a = a->next) {
-    a->spare = (void *)&rectangle[i];
+  rectangle[3] = M_PI + M_PI_2;
+  for (i = 0, ax = rect->tail->next; ax != rect->head; ax = ax->next) {
+    ax->spare = (void *)&rectangle[i];
     i++;
   }
 
-  a = dlink_new();
-  a->object = (void *)polygon_new_and_copy(rect);
-  dlist_insert(a, circumrects);
-  /*
-  putline(xmin, ymin, xmax, ymin, 255, 0, 0);
-  putline(xmax, ymin, xmax, ymax, 255, 0, 0);
-  putline(xmax, ymax, xmin, ymax, 255, 0, 0);
-  putline(xmin, ymax, xmin, ymin, 255, 0, 0);
-  */
+  ax = dlink_new();
+  ax->object = (void *)polygon_new_and_copy(rect);
+  dlist_insert(ax, circumrects);
+
   // Difference between angle of edge of rectangle and edge of convexhull
   start = NULL;
-  for (i = 0, a = rect->tail->next; a != rect->head; a = a->next) {
-    delta = (*((real_t *)cross_vertex[i]->spare) - *((real_t *)a->spare) + 2 * M_PI);
+  for (i = 0, ax = rect->tail->next; ax != rect->head; ax = ax->next) {
+    delta = (*((real_t *)cross_vertex[i]->spare) - *((real_t *)ax->spare) + 2 * M_PI);
     if (delta >= 2 * M_PI) delta -= 2 * M_PI;
     if ((start == NULL) || (delta < dmin)) {
       start = cross_vertex[i];
@@ -900,93 +1042,102 @@ static void convexhull_create_circumference_rectangles(dlist_t *circumrects, pol
     }
     i++;
   }
-  /*
-  circle(((point_t *)start->object)->x, ((point_t *)start->object)->y, 10, 255, 0, 0);
-  keyhit();
-  circle(((point_t *)start->object)->x, ((point_t *)start->object)->y, 10, 0, 0, 0);
-  putline(xmin, ymin, xmax, ymin, 0, 0, 0);
-  putline(xmax, ymin, xmax, ymax, 0, 0, 0);
-  putline(xmax, ymax, xmin, ymax, 0, 0, 0);
-  putline(xmin, ymax, xmin, ymin, 0, 0, 0);
-  */
+
   rotate = 0;
   pivot = start;
   do {
-    if (pivot->next == convexhull->head) pivot_next = convexhull->tail->next;
+    if (pivot->next == chull->head) pivot_next = chull->tail->next;
     else pivot_next = pivot->next;
 
     p = (point_t *)pivot->object;
     q = (point_t *)pivot_next->object;
 
-    if ((p->x == q->x) || (p->y == q->y)) { // for 0 or 90 or 180 degree
-      // nothing
-    } else { // for others
-      // update rectangluar by pivot edge for rotation
-      slope = (q->y - p->y) / (q->x - p->x);
-      yslope = q->y - slope * q->x;
+    if (point_get_x(p) == point_get_x(q) || point_get_y(p) == point_get_y(q)) {
+      // For 0 or 90 or 180 degree
+      // Nothing
+    } else {
+      // For others
+      // Update rectangluar by pivot edge for rotation
+
+      // Finding parameters of extending line between p and q
+      /////////////////////////////////////////////////////////
+      slope = (point_get_y(q) - point_get_y(p)) /
+	(point_get_x(q) - point_get_x(p));
+      yslope = point_get_y(q) - slope * point_get_x(q);
 
       r = (point_t *)cross_vertex[(irotate + 1) % 4]->object;
       ortho = -1 / slope;
-      yortho = r->y - ortho * r->x;
-
+      yortho = point_get_y(r) - ortho * point_get_x(r);
+      
       s = polygon_glimpse(irotate, rect);
-      s->x = -1 * (yslope - yortho) / (slope - ortho);
-      s->y = slope * s->x + yslope;
+      point_put_x(-1 * (yslope - yortho) / (slope - ortho), s);
+      point_put_y(slope * point_get_x(s) + yslope, s);
 
-      temp = slope; slope = ortho; ortho = temp;
+      /////////////////////////////////////////////////////////
+      temp = slope;
+      slope = ortho;
+      ortho = temp;
       yslope = yortho;
       r = (point_t *)cross_vertex[(irotate + 2) % 4]->object;
-      yortho = r->y - ortho * r->x;
+      yortho = point_get_y(r) - ortho * point_get_x(r);
 
       s = polygon_glimpse((irotate + 1) % 4, rect);
-      s->x = -1 * (yslope - yortho) / (slope - ortho);
-      s->y = slope * s->x + yslope;
+      point_put_x(-1 * (yslope - yortho) / (slope - ortho), s);
+      point_put_y(slope * point_get_x(s) + yslope, s);
 
-      temp = slope; slope = ortho; ortho = temp;
+      /////////////////////////////////////////////////////////
+      temp = slope;
+      slope = ortho;
+      ortho = temp;
       yslope = yortho;
       r = (point_t *)cross_vertex[(irotate + 3) % 4]->object;
-      yortho = r->y - ortho * r->x;
+      yortho = point_get_y(r) - ortho * point_get_x(r);
 
       s = polygon_glimpse((irotate + 2) % 4, rect);
-      s->x = -1 * (yslope - yortho) / (slope - ortho);
-      s->y = slope * s->x + yslope;
-      
-      temp = slope; slope = ortho; ortho = temp;
+      point_put_x(-1 * (yslope - yortho) / (slope - ortho), s);
+      point_put_y(slope * point_get_x(s) + yslope, s);
+
+      /////////////////////////////////////////////////////////
+      temp = slope;
+      slope = ortho;
+      ortho = temp;
       yslope = yortho;
       r = (point_t *)cross_vertex[irotate]->object;
-      yortho = r->y - ortho * r->x;
+      yortho = point_get_y(r) - ortho * point_get_x(r);
 
       s = polygon_glimpse((irotate + 3) % 4, rect);
-      s->x = -1 * (yslope - yortho) / (slope - ortho);
-      s->y = slope * s->x + yslope;
+      point_put_x(-1 * (yslope - yortho) / (slope - ortho), s);
+      point_put_y(slope * point_get_x(s) + yslope, s);
 
+      /////////////////////////////////////////////////////////
       rotate += dmin;
-      for (a = rect->tail->next; a != rect->head; a = a->next) {
-	*((real_t *)a->spare) += dmin;
-	if (*((real_t *)a->spare) >= 2 * M_PI)
-	  *((real_t *)a->spare) -= 2 * M_PI;
+      for (ax = rect->tail->next; ax != rect->head; ax = ax->next) {
+	*((real_t *)ax->spare) += dmin;
+	if (*((real_t *)ax->spare) >= 2 * M_PI)
+	  *((real_t *)ax->spare) -= 2 * M_PI;
       }
       p = polygon_glimpse(0, rect);
       q = polygon_glimpse(1, rect);
       r = polygon_glimpse(2, rect);
       s = polygon_glimpse(3, rect);
 
-      a = dlink_new();
-      a->object = (void *)polygon_new_and_copy(rect);
-      dlist_insert(a, circumrects);
+      ax = dlink_new();
+      ax->object = (void *)polygon_new_and_copy(rect);
+      dlist_insert(ax, circumrects);
 
-      temp = distance_between_points(p, q) * distance_between_points(q, r);
-      if (temp < area) area = temp;
+      temp = get_distance_of_p2p(p, q) * get_distance_of_p2p(q, r);
+      if (temp < area)
+	area = temp;
     }
 
-    // update crossing verteces between rectangle and convexhull
+    // Update crossing verteces between rectangle and convexhull
     cross_vertex[irotate] = pivot_next;
 
     pivot = NULL;
-    for (i = 0, a = rect->tail->next; a != rect->head; a = a->next) {
-      delta = (*((real_t *)cross_vertex[i]->spare) - *((real_t *)a->spare) + 2 * M_PI);
+    for (i = 0, ax = rect->tail->next; ax != rect->head; ax = ax->next) {
+      delta = (*((real_t *)cross_vertex[i]->spare) - *((real_t *)ax->spare) + 2 * M_PI);
       if (delta >= 2 * M_PI) delta -= 2 * M_PI;
-      if ((pivot == NULL) || (delta < dmin)) {
+      if (pivot == NULL || delta < dmin) {
 	pivot = cross_vertex[i];
 	dmin = delta;
 	irotate = i;
@@ -998,21 +1149,6 @@ static void convexhull_create_circumference_rectangles(dlist_t *circumrects, pol
     q = polygon_glimpse(1, rect);
     r = polygon_glimpse(2, rect);
     s = polygon_glimpse(3, rect);
-    /*
-    putline(p->x, p->y, q->x, q->y, 255, 0, 0);
-    putline(q->x, q->y, r->x, r->y, 255, 0, 0);
-    putline(r->x, r->y, s->x, s->y, 255, 0, 0);
-    putline(s->x, s->y, p->x, p->y, 255, 0, 0);
-
-    circle(((point_t *)pivot->object)->x, ((point_t *)pivot->object)->y, 10, 255, 0, 0);
-    keyhit();
-
-    circle(((point_t *)pivot->object)->x, ((point_t *)pivot->object)->y, 10, 0, 0, 0);
-    putline(p->x, p->y, q->x, q->y, 0, 0, 0);
-    putline(q->x, q->y, r->x, r->y, 0, 0, 0);
-    putline(r->x, r->y, s->x, s->y, 0, 0, 0);
-    putline(s->x, s->y, p->x, p->y, 0, 0, 0);
-    */
   } while (pivot != start);
 
   point_destroy(polygon_pop(rect));
@@ -1024,7 +1160,7 @@ static void convexhull_create_circumference_rectangles(dlist_t *circumrects, pol
   free(angle);
 }
 
-real_t convexhull_create_min_area_rectangle(polygon_t *minrect, polygon_t *convexhull)
+real_t convexhull_compute_min_area_rectangle(polygon_t *minrect, polygon_t *chull)
 {
   real_t area, temp;
   dlist_t *circumrects;
@@ -1034,17 +1170,11 @@ real_t convexhull_create_min_area_rectangle(polygon_t *minrect, polygon_t *conve
 
   assert(minrect);
   //assert(minrect->count == 4);
-  assert(convexhull);
-  assert(convexhull->count >= 4);
-
-  polygon_insert(point_new(), minrect);
-  polygon_insert(point_new(), minrect);
-  polygon_insert(point_new(), minrect);
-  polygon_insert(point_new(), minrect);
+  assert(chull);
+  assert(chull->count >= 3);
 
   circumrects = dlist_new();
-
-  convexhull_create_circumference_rectangles(circumrects, convexhull);
+  convexhull_create_circumference_rectangles(circumrects, chull);
 
   b = NULL;
   for (a = circumrects->tail->next; a != circumrects->head; a = a->next) {
@@ -1052,7 +1182,7 @@ real_t convexhull_create_min_area_rectangle(polygon_t *minrect, polygon_t *conve
     p = polygon_glimpse(0, rect);
     q = polygon_glimpse(1, rect);
     r = polygon_glimpse(2, rect);
-    temp = distance_between_points(p, q) * distance_between_points(q, r);
+    temp = get_distance_of_p2p(p, q) * get_distance_of_p2p(q, r);
     if ((b == NULL) || (temp < area)) {
       b = a;
       area = temp;
@@ -1065,24 +1195,25 @@ real_t convexhull_create_min_area_rectangle(polygon_t *minrect, polygon_t *conve
   minrect->reference--;
   dlink_destroy(b);
   */
-
+  /*
+  polygon_insert(point_new(), minrect);
+  polygon_insert(point_new(), minrect);
+  polygon_insert(point_new(), minrect);
+  polygon_insert(point_new(), minrect);
   polygon_copy(minrect, (polygon_t *)b->object);
+  */
+  polygon_insert(polygon_glimpse(0, (polygon_t *)b->object), minrect);
+  polygon_insert(polygon_glimpse(1, (polygon_t *)b->object), minrect);
+  polygon_insert(polygon_glimpse(2, (polygon_t *)b->object), minrect);
+  polygon_insert(polygon_glimpse(3, (polygon_t *)b->object), minrect);
 
-  while (circumrects->count) {
-    a = dlist_pop(circumrects);
-    rect = (polygon_t *)a->object;
-    while (rect->count) {
-      p = polygon_pop(rect);
-      point_destroy(p);
-    }
-    dlink_destroy(a);
-  }
+  convexhull_delete_circumference_rectangles(circumrects);
   dlist_destroy(circumrects);
 
   return area;
 }
 
-real_t convexhull_create_min_perimeter_rectangle(polygon_t *minrect, polygon_t *convexhull)
+real_t convexhull_compute_min_perimeter_rectangle(polygon_t *minrect, polygon_t *chull)
 {
   real_t perimeter, temp;
   dlist_t *circumrects;
@@ -1092,17 +1223,11 @@ real_t convexhull_create_min_perimeter_rectangle(polygon_t *minrect, polygon_t *
 
   assert(minrect);
   //  assert(minrect->count == 4);
-  assert(convexhull);
-  assert(convexhull->count >= 4);
-
-  polygon_insert(point_new(), minrect);
-  polygon_insert(point_new(), minrect);
-  polygon_insert(point_new(), minrect);
-  polygon_insert(point_new(), minrect);
+  assert(chull);
+  assert(chull->count >= 3);
 
   circumrects = dlist_new();
-
-  convexhull_create_circumference_rectangles(circumrects, convexhull);
+  convexhull_create_circumference_rectangles(circumrects, chull);
 
   b = NULL;
   for (a = circumrects->tail->next; a != circumrects->head; a = a->next) {
@@ -1110,7 +1235,7 @@ real_t convexhull_create_min_perimeter_rectangle(polygon_t *minrect, polygon_t *
     p = polygon_glimpse(0, rect);
     q = polygon_glimpse(1, rect);
     r = polygon_glimpse(2, rect);
-    temp = 2 * (distance_between_points(p, q) + distance_between_points(q, r));
+    temp = 2 * (get_distance_of_p2p(p, q) + get_distance_of_p2p(q, r));
     if ((b == NULL) || (temp < perimeter)) {
       b = a;
       perimeter = temp;
@@ -1123,18 +1248,20 @@ real_t convexhull_create_min_perimeter_rectangle(polygon_t *minrect, polygon_t *
   minrect->reference--;
   dlink_destroy(b);
   */
+  /*
+  polygon_insert(point_new(), minrect);
+  polygon_insert(point_new(), minrect);
+  polygon_insert(point_new(), minrect);
+  polygon_insert(point_new(), minrect);
   polygon_copy(minrect, (polygon_t *)b->object);
+  */
 
-  while (circumrects->count) {
-    a = dlist_pop(circumrects);
-    rect = (polygon_t *)a->object;
-    while (rect->count) {
-      p = polygon_pop(rect);
-      point_destroy(p);
-    }
-    dlink_destroy(a);
-  }
+  polygon_insert(polygon_glimpse(0, (polygon_t *)b->object), minrect);
+  polygon_insert(polygon_glimpse(1, (polygon_t *)b->object), minrect);
+  polygon_insert(polygon_glimpse(2, (polygon_t *)b->object), minrect);
+  polygon_insert(polygon_glimpse(3, (polygon_t *)b->object), minrect);
 
+  convexhull_delete_circumference_rectangles(circumrects);
   dlist_destroy(circumrects);
 
   return perimeter;

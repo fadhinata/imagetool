@@ -17,9 +17,9 @@
 #ifndef __SCREEN_H__
 #define __SCREEN_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 #include <pixmap/bitmap.h>
 #include <pixmap/bytemap.h>
@@ -36,8 +36,8 @@ extern "C" {
   void write_bitmap_to_screen(bitmap_t *red, bitmap_t *green, bitmap_t *blue);
   void wait_keyhit(void);
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 #endif /* __SCREEN_H__ */

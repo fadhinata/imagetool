@@ -1,7 +1,8 @@
 #ifndef __MAPHDR_H__
 #define __MAPHDR_H__
 
-#define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
+//#define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
+#define WIDTHBYTES(bits) (((bits) + 31) & ~31) / 8
 
 #ifdef __cplusplus
 extern "C" {

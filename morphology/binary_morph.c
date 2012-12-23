@@ -257,7 +257,7 @@ void binary_dilate(bitmap_t *q, bitmap_t *p, bytemap_t *kernel)
   }
 
   // right bottom
-  qbuf = bitmap_get_buffer(q) + yoff * qpitch;
+  qbuf = bitmap_get_buffer(q) + (height - (h - yoff)) * qpitch;
   for (y = height - (h - yoff); y < height; y++) {
     for (x = width - (w - xoff); x < width; x++) {
       hit = 0;
@@ -293,6 +293,7 @@ void binary_dilate(bitmap_t *q, bitmap_t *p, bytemap_t *kernel)
         }
         kbuf += kpitch;
       }
+      //printf("%d, %d, hit:%d\n", x, y, hit);
       if (hit > 0) *(qbuf + (x >> 3)) |= (1 << (x % 8));
       else *(qbuf + (x >> 3)) &= ~(1 << (x % 8));
     }
@@ -391,7 +392,7 @@ void binary_dilate(bitmap_t *q, bitmap_t *p, bytemap_t *kernel)
   }
 
   // left band
-  qbuf = q->buffer+yoff*q->header.pitch;
+  qbuf = bitmap_get_buffer(q) + yoff * qpitch;
   for (y = yoff; y < height - (h - yoff); y++) {
     for (x = 0; x < xoff; x++) {
       hit = 0;
@@ -667,7 +668,7 @@ void binary_erode(bitmap_t *q, bitmap_t *p, bytemap_t *kernel)
   }
 
   // right bottom
-  qbuf = bitmap_get_buffer(q) + yoff * qpitch;
+  qbuf = bitmap_get_buffer(q) + (height - (h - yoff)) * qpitch;
   for (y = height - (h - yoff); y < height; y++) {
     for (x = width - (w - xoff); x < width; x++) {
       hit = 0;
@@ -801,7 +802,7 @@ void binary_erode(bitmap_t *q, bitmap_t *p, bytemap_t *kernel)
   }
 
   // left band
-  qbuf = q->buffer+yoff*q->header.pitch;
+  qbuf = bitmap_get_buffer(q) + yoff * qpitch;
   for (y = yoff; y < height - (h - yoff); y++) {
     for (x = 0; x < xoff; x++) {
       hit = 0;

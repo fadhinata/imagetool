@@ -98,20 +98,24 @@ void rgb2hsv(floatmap_t *h, floatmap_t *s, floatmap_t *v, bytemap_t *r, bytemap_
 	}
       }
 
-      vval = maxval;                // v
-      delta = maxval - minval;
-      if (maxval != 0) {
-	sval = delta / maxval;        // s
-	if (rval == maxval) hval = (gval - bval) / delta;        // between yellow & magenta
-	else if (gval == maxval) hval = 2 + (bval - rval) / delta;    // between cyan & yellow
-	else hval = 4 + (rval - gval) / delta;    // between magenta & cyan
-	hval *= 60;                // degrees
-	if (hval < 0) hval += 360;
-      } else {
-	// r = g = b = 0
-	// s = 0, v is undefined
-	sval = 0;
-	hval = -1;
+      if (vbuf) vval = maxval;                // v
+      if (sbuf || hbuf) {
+	delta = maxval - minval;
+	if (maxval != 0) {
+	  if (sbuf) sval = delta / maxval;        // s
+	  if (hbuf) {
+	    if (rval == maxval) hval = (gval - bval) / delta;        // between yellow & magenta
+	    else if (gval == maxval) hval = 2 + (bval - rval) / delta;    // between cyan & yellow
+	    else hval = 4 + (rval - gval) / delta;    // between magenta & cyan
+	    hval *= 60;                // degrees
+	    if (hval < 0) hval += 360;
+	  }
+	} else {
+	  // r = g = b = 0
+	  // s = 0, v is undefined
+	  if (sbuf) sval = 0;
+	  if (hbuf) hval = -1;
+	}
       }
       if (hbuf) *(hbuf + x) = hval;
       if (sbuf) *(sbuf + x) = sval;

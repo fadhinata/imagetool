@@ -48,7 +48,7 @@ point_list_t *point_list_new_and_copy(point_list_t *list)
 
   for (a = list->tail->next; a != list->head; a = a->next) {
     p = point_new_and_copy((point_t *)a->object);
-    point_inc_ref(p);
+    //point_inc_ref(p);
     b = dlink_new();
     b->object = (void *)p;
     dlist_insert(b, (dlist_t *)ret);
@@ -175,7 +175,25 @@ int point_list_query(point_t *p, point_list_t *list)
   return -1;
 }
 
-void point_list_delete(point_list_t *list)
+/*
+void point_list_clear(point_list_t *list)
+{
+  dlink_t *link;
+  point_t *p;
+
+  assert(list);
+
+  while (point_list_get_count(list) > 0) {
+    link = dlist_pop((dlist_t *)list);
+    point_dec_ref((point_t *)link->object);
+    point_destroy((point_t *)link->object);
+    dlink_destroy(link);
+  }
+  //dlist_destroy((dlist_t *)list);
+}
+*/
+
+void point_list_clear(point_list_t *list)
 {
   dlink_t *link;
   point_t *p;
@@ -184,7 +202,7 @@ void point_list_delete(point_list_t *list)
 
   for (link = list->tail->next; link != list->head; link = link->next) {
     p = (point_t *)link->object;
-    point_dec_ref(p);
+    point_destroy(p);
   }
 }
 
@@ -202,7 +220,7 @@ void point_list_destroy(point_list_t *list)
     }
     dlist_destroy((dlist_t *)list);
   } else {
-    point_list_dec_ref(list);
+    list->reference--;
   }
 }
 

@@ -47,7 +47,7 @@ extern "C" {
   } dlist_t;
 
 #define dlist_inc_ref(p) ((p)->reference++)
-#define dlist_dec_ref(p) ((p)->reference--)
+#define dlist_dec_ref(p) ((p)->reference = (p)->reference > 0 ? (p)->reference-1 : (p)->reference)
 #define dlist_get_ref(p) ((p)->reference)
 #define dlist_inc_count(p) ((p)->count++)
 #define dlist_dec_count(p) ((p)->count--)

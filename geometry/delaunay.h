@@ -35,6 +35,7 @@ extern "C" {
 #define delaunay_net_inc_ref(net) dlist_inc_ref((dlist_t *)net)
 #define delaunay_net_get_ref(net) dlist_get_ref((dlist_t *)net)
 #define delaunay_net_get_count_of_neighbors(net) dlist_get_count((dlist_t *)net)
+#define delaunay_net_get_center(net) (point_t *)((net)->spare)
 #define delaunay_net_get_coordinate(net) (point_t *)((net)->spare)
 #define delaunay_net_pop(net) dlist_pop((dlist_t *)net)
   delaunay_net_t *delaunay_net_get_neighbor(int index, delaunay_net_t *net);
@@ -43,7 +44,7 @@ extern "C" {
 #define delaunay_list_dec_ref(list) dlist_dec_ref((dlist_t *)list)
 #define delaunay_list_inc_ref(list) dlist_inc_ref((dlist_t *)list)
 #define delaunay_list_get_ref(list) dlist_get_ref((dlist_t *)list)
-#define delaunay_list_get_count_of_networks(list) dlist_get_count((dlist_t *)list)
+#define delaunay_list_get_count(list) dlist_get_count((dlist_t *)list)
   delaunay_net_t *delaunay_list_get_net(int inet, delaunay_list_t *list);
   point_t *delaunay_list_get_coordinate(int inet, delaunay_list_t *list);
   void delaunay_list_delete(delaunay_list_t *list);

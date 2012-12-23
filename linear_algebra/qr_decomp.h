@@ -23,6 +23,7 @@
 extern "C" {
 #endif
 
+  void matrix_qr_decomposite(matrix_t *q, matrix_t *r, matrix_t *m);
   void matrix_new_and_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p);
   void cmatrix_new_and_qr_decomposition(matrix_t **q, matrix_t **r, matrix_t *p);
 

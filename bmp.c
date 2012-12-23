@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <assert.h>
+#include <pixmap/bytemap.h>
 
 #ifdef WIN32
 /*
@@ -340,7 +342,7 @@ SaveDIBitmap(const char *filename, /* I - File to load */
               infosize += info->bmiHeader.biClrUsed * 4;
 	    break;
     }
-
+    
     size = sizeof(BITMAPFILEHEADER) + infosize + bitsize;
 
     /* Write the file header, bitmap information, and bitmap pixel data... */
@@ -348,7 +350,7 @@ SaveDIBitmap(const char *filename, /* I - File to load */
     write_dword(fp, size);          /* bfSize */
     write_word(fp, 0);              /* bfReserved1 */
     write_word(fp, 0);              /* bfReserved2 */
-    write_dword(fp, 18 + infosize); /* bfOffBits */
+    write_dword(fp, 14 + infosize); /* bfOffBits */
 
     write_dword(fp, info->bmiHeader.biSize);
     write_long(fp, info->bmiHeader.biWidth);
@@ -362,8 +364,8 @@ SaveDIBitmap(const char *filename, /* I - File to load */
     write_dword(fp, info->bmiHeader.biClrUsed);
     write_dword(fp, info->bmiHeader.biClrImportant);
 
-    if (infosize > 40) {
-		if (fwrite(info->bmiColors, infosize - 40, 1, fp) < 1) {
+    if (infosize > sizeof(BITMAPINFOHEADER)) {
+      if (fwrite(info->bmiColors, infosize - sizeof(BITMAPINFOHEADER), 1, fp) < 1) {
             /* Couldn't write the bitmap header - return... */
             fclose(fp);
             return (-1);
@@ -475,3 +477,37 @@ write_long(FILE *fp, /* I - File to write to */
     return (putc(l >> 24, fp));
 }
 #endif /* WIN32 */
+
+void save_bytemap_as_gray_BMP(bytemap_t *m, const char *fn)
+{
+  int i, w, h;
+  BITMAPINFO *info;
+
+  assert(m);
+
+  w = bytemap_get_width(m);
+  h = bytemap_get_height(m);
+
+  info = (BITMAPINFO *)malloc(sizeof(BITMAPINFO) + sizeof(RGBQUAD) * 255);
+  info->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+  info->bmiHeader.biWidth = w;
+  info->bmiHeader.biHeight = -h;
+  info->bmiHeader.biPlanes = 1;
+  info->bmiHeader.biBitCount = 8;
+  info->bmiHeader.biCompression = BI_RGB;
+  info->bmiHeader.biSizeImage = ((w * 8 + 31) & ~31) / 8 * h;
+  info->bmiHeader.biXPelsPerMeter = 72;
+  info->bmiHeader.biYPelsPerMeter = 72;
+  info->bmiHeader.biClrUsed = 256;
+  info->bmiHeader.biClrImportant = 256;
+
+  for (i = 0; i < 256; i++) {
+    info->bmiColors[i].rgbRed = i;
+    info->bmiColors[i].rgbGreen = i;
+    info->bmiColors[i].rgbBlue = i;
+  }
+
+  SaveDIBitmap(fn, info, bytemap_get_buffer(m));
+
+  free(info);
+}

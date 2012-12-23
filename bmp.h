@@ -16,6 +16,8 @@
 #    include <wingdi.h>
 #  endif /* WIN32 */
 
+#include <pixmap/bytemap.h>
+
 /*
  * Make this header file work with C and C++ source code...
  */
@@ -88,6 +90,8 @@ typedef struct {                     /**** Bitmap information structure ****/
 
 extern unsigned char *LoadDIBitmap(const char *filename, BITMAPINFO **info);
 extern int SaveDIBitmap(const char *filename, BITMAPINFO *info, unsigned char *bits);
+
+  void save_bytemap_as_gray_BMP(bytemap_t *m, const char *fn);
 
 #  ifdef __cplusplus
 }

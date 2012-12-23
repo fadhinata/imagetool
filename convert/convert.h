@@ -76,6 +76,7 @@ extern "C" {
   void matrix_copy_dwordmap(matrix_t *matrix, int c, int r, dwordmap_t *dwordmap, int x, int y, int w, int h);
 
   void bitmap2bytemap(bytemap_t *q, bitmap_t *p);
+  void dynamic_bitmap2bytemap(bytemap_t *q, bitmap_t *p);
   void bytemap2bitmap(bitmap_t *q, bytemap_t *p);
 
   vector_t *cvector_new_and_copy_point_list(point_list_t *list);

@@ -339,8 +339,8 @@ int bytemap_create_watershed(dwordmap_t *labelmap, dlist_t *info, bytemap_t *ima
     link->object = (void *)NULL;
     dlist_insert(link, info);
     for (k = 1; k <= curlabel; k++) {
-      point = point_new_and_assign(xsum[k]/(double)pixels[k],
-				   ysum[k]/(double)pixels[k], 0);
+      point = point_new_and_set(xsum[k]/(double)pixels[k],
+				ysum[k]/(double)pixels[k], 0);
       point->reference++;
       link = dlink_new();
       link->object = (void *)point;
@@ -626,8 +626,8 @@ int wordmap_create_watershed(dwordmap_t *labelmap, dlist_t *info, wordmap_t *ima
     link->object = (void *)NULL;
     dlist_insert(link, info);
     for (k = 1; k <= curlabel; k++) {
-      point = point_new_and_assign(xsum[k]/(double)pixels[k],
-				   ysum[k]/(double)pixels[k], 0);
+      point = point_new_and_set(xsum[k]/(double)pixels[k],
+				ysum[k]/(double)pixels[k], 0);
       point->reference++;
       link = dlink_new();
       link->object = (void *)point;

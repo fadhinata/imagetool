@@ -36,14 +36,33 @@ void chaincode_destroy(chaincode_t *chain)
 {
   assert(chain);
 
-  point_destroy((point_t *)chain->spare);
-  while (chain->count) {
+  if (chain->spare)
+    point_destroy((point_t *)chain->spare);
+
+  while (chain->count > 0) {
     dlink_destroy(dlist_pop(chain));
   }
+
   dlist_destroy(chain);
 }
 
-int dwordmap_create_chaincode(chaincode_t *chain, dwordmap_t *image, long label)
+/*
+void chaincode_delete(chaincode_t *chain)
+{
+  assert(chain);
+
+  if (chain->spare) {
+    point_destroy((point_t *)chain->spare);
+    chain->spare = NULL;
+  }
+
+  while (chain->count > 0) {
+    dlink_destroy(dlist_pop(chain));
+  }
+}
+*/
+
+int chaincoding_on_dwordmap(chaincode_t *chain, dwordmap_t *image, long label)
 {
   int found = 0;
   int x, y, w, h, pitch;
@@ -63,14 +82,14 @@ int dwordmap_create_chaincode(chaincode_t *chain, dwordmap_t *image, long label)
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
       if (*(buf + x) == label) {
-	chain->spare = (void *)point_new_and_assign(x, y, 0);
+	chain->spare = (void *)point_new_and_set(x, y, 0);
 	found = 1;
 	goto __next__;
       }
     }
     buf += pitch;
   }
-	
+
  __next__:;
 
   if (!found) return -1; // nothing at all
@@ -107,7 +126,7 @@ int dwordmap_create_chaincode(chaincode_t *chain, dwordmap_t *image, long label)
   return 0;
 }
 
-int bitmap_create_chaincode(chaincode_t *chain, bitmap_t *image)
+int chaincoding_on_bitmap(chaincode_t *chain, bitmap_t *image)
 {
   int found = 0;
   int x, y, w, h, pitch;
@@ -127,7 +146,7 @@ int bitmap_create_chaincode(chaincode_t *chain, bitmap_t *image)
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
       if ((*(buf + (x >> 3))) & (1 << (x % 8))) {
-	chain->spare = (void *)point_new_and_assign(x, y, 0);
+	chain->spare = (void *)point_new_and_set(x, y, 0);
 	found = 1;
 	goto __next__;
       }
@@ -173,10 +192,11 @@ int bitmap_create_chaincode(chaincode_t *chain, bitmap_t *image)
 
 /* pixel_xlen : actual horizontal length contained by one pixel
    pixel_ylen : actual vertical length contained by one pixel
+
    3 2 1
    4   0
    5 6 7   */
-real_t chaincode_get_perimeter(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen)
+real_t chaincode_compute_perimeter(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen)
 {
   real_t perimeter;
   dlink_t *a;
@@ -201,7 +221,7 @@ real_t chaincode_get_perimeter(chaincode_t *chain, real_t pixel_xlen, real_t pix
    3 2 1
    4   0
    5 6 7   */
-real_t chaincode_get_area(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen)
+real_t chaincode_compute_area(chaincode_t *chain, real_t pixel_xlen, real_t pixel_ylen)
 {
   real_t area;
   int x, y;
@@ -240,20 +260,23 @@ int chaincode_create_point_list(point_list_t *list, chaincode_t *chain)
 
   x = ((point_t *)chain->spare)->x;
   y = ((point_t *)chain->spare)->y;
-  p = point_new_and_assign(x, y, 0);
+  p = point_new_and_set(x, y, 0);
   point_list_insert(p, list);
+  point_dec_ref(p);
+
   for (a = chain->tail->next; a->next != chain->head; a = a->next) {
     n = (int)a->object;
     x += dx[n];
     y += dy[n];
-    p = point_new_and_assign(x, y, 0);
+    p = point_new_and_set(x, y, 0);
     point_list_insert(p, list);
+    point_dec_ref(p);
   }
 
   return list->count;
 }
 
-int dwordmap_delete_shell(dwordmap_t *pixmap, long label, int depth)
+int dwordmap_strip_shell(dwordmap_t *pixmap, long label, int depth)
 {
   int i, n;
   int x, y;
@@ -265,7 +288,8 @@ int dwordmap_delete_shell(dwordmap_t *pixmap, long label, int depth)
 
   for (i = 0; i < depth; i++) {
     chain = chaincode_new();
-    if (dwordmap_create_chaincode(chain, pixmap, label) < 0) break;
+    if (chaincoding_on_dwordmap(chain, pixmap, label) < 0)
+      break;
     x = ((point_t *)chain->spare)->x;
     y = ((point_t *)chain->spare)->y;
     dwordmap_put_value(-1, pixmap, x, y);
@@ -278,13 +302,14 @@ int dwordmap_delete_shell(dwordmap_t *pixmap, long label, int depth)
       dwordmap_put_value(-1, pixmap, x, y);
       //DWORDMAP_PUT(-1, pixmap, x, y);
     }
+    //chaincode_delete(chain);
     chaincode_destroy(chain);
   }
 
   return i;
 }
 
-int bitmap_delete_shell(bitmap_t *pixmap, int depth)
+int bitmap_strip_shell(bitmap_t *pixmap, int depth)
 {
   int i, n;
   int x, y;
@@ -296,7 +321,7 @@ int bitmap_delete_shell(bitmap_t *pixmap, int depth)
 
   for (i = 0; i < depth; i++) {
     chain = chaincode_new();
-    if (bitmap_create_chaincode(chain, pixmap) < 0) break;
+    if (chaincoding_on_bitmap(chain, pixmap) < 0) break;
     //printf("chaincoding complete\n");
     x = ((point_t *)chain->spare)->x;
     y = ((point_t *)chain->spare)->y;
@@ -316,6 +341,7 @@ int bitmap_delete_shell(bitmap_t *pixmap, int depth)
       //printf("delete shell\n");
       //DWORDMAP_PUT(-1, pixmap, x, y);
     }
+    //chaincode_delete(chain);
     chaincode_destroy(chain);
   }
 

@@ -1851,7 +1851,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
       read_bband_3x3_from_bitmap(value, x, y, bin);
       if ((value[0] == 1) &&
 	  (is_end_in_3x3(value) || is_bifurcation_in_3x3(value))) {
-	p = point_new_and_assign(x, y, 0);
+	p = point_new_and_set(x, y, 0);
 	goto __start_found;
       }
       top_shift_3x3(value);
@@ -1896,7 +1896,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 	read_3x3_from_bitmap(value, x, y, bin);
 
 	if (is_bifurcation_in_3x3(value)) {
-	  p = point_new_and_assign(x, y, 0);
+	  p = point_new_and_set(x, y, 0);
 	  point_inc_ref(p);
 	  link = dlink_new(); link->object = (void *)p;
 	  dlist_insert(link, edge);
@@ -1909,7 +1909,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 	    if (bitmap_isreset(marker, x + dx[j], y + dy[j]) && value[j + 1]) {
 	      // allocate new edge
 	      edge = dlist_new();
-	      p = point_new_and_assign(x + dx[j], y + dy[j], 0);
+	      p = point_new_and_set(x + dx[j], y + dy[j], 0);
 	      point_inc_ref(p);
 	      link = dlink_new(); link->object = (void *)p;
 	      dlist_insert(link, edge);
@@ -1941,7 +1941,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 	if (is_end_in_3x3(value)) {
 	  //printf("An end point is detected!\n");
 	  // Terminate edge finding
-	  p = point_new_and_assign(x, y, 0);
+	  p = point_new_and_set(x, y, 0);
 	  point_inc_ref(p);
 	  link = dlink_new(); link->object = (void *)p;
 	  dlist_insert(link, edge);
@@ -1962,7 +1962,7 @@ void thinning_to_edge_tree(dlist_t *edge_tree, bitmap_t *bin)
 
 	//printf("An end point is detected!\n");
 	// Terminate edge finding
-	p = point_new_and_assign(x, y, 0);
+	p = point_new_and_set(x, y, 0);
 	point_inc_ref(p);
 	link = dlink_new(); link->object = (void *)p;
 	dlist_insert(link, edge);

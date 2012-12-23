@@ -28,7 +28,7 @@ extern "C" {
 
 #define line_list_new() (line_list_t *)dlist_new()
 #define line_list_inc_ref(p) ((p)->reference++)
-#define line_list_dec_ref(p) ((p)->reference--)
+#define line_list_dec_ref(p) ((p)->reference = (p)->reference > 0 ? (p)->reference-1 : (p)->reference)
 #define line_list_get_ref(p) ((p)->reference)
 #define line_list_get_count(list) ((list)->count)
   void line_list_copy(line_list_t *copyer, line_list_t *copee);
@@ -42,7 +42,6 @@ extern "C" {
   void line_list_put(line_t *line, int i, line_list_t *list);
 #define line_list_exchange(i, j, list) dlist_exchange(i, j, (dlist_t *)(list))
   int line_list_query(line_t *line, line_list_t *list);
-  void line_list_delete(line_list_t *list);
   void line_list_destroy(line_list_t *list);
 
 #ifdef __cplusplus

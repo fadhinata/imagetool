@@ -42,8 +42,8 @@ extern "C" {
 #define dwordmap_get_height(p) ((p)->header.height)
 #define dwordmap_get_buffer(p) ((p)->buffer)
 #define dwordmap_get_pitch(p) ((p)->header.pitch)
-#define dwordmap_get_value(p, x, y) (*((p)->buffer+(y)*(((p)->header.pitch)/sizeof(long))+(x)))
-#define dwordmap_put_value(q, p, x, y) (*((p)->buffer+(y)*((p)->header.pitch/sizeof(long))+(x)) = q)
+#define dwordmap_get_value(p, x, y) (*((p)->buffer+(y)*(((p)->header.pitch)/sizeof(uint32_t))+(x)))
+#define dwordmap_put_value(q, p, x, y) (*((p)->buffer+(y)*((p)->header.pitch/sizeof(uint32_t))+(x)) = q)
 #define dwordmap_inc_value(m, x, y) ((*((m)->buffer+(y)*((m)->header.pitch)/sizeof(*((m)->buffer)) + (x)))++)
 #define dwordmap_dec_value(m, x, y) ((*((m)->buffer+(y)*((m)->header.pitch)/sizeof(*((m)->buffer)) + (x)))--)
   dwordmap_t *dwordmap_new(int w, int h);

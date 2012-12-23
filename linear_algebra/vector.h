@@ -93,9 +93,9 @@ extern "C" {
   void vector_fill(vector_t *p, int index, int len, real_t v);
   void ivector_fill(vector_t *p, int index, int len, real_t v);
   void cvector_fill(vector_t *p, int index, int len, complex_t v);
-  void vector_randomly_fill(vector_t *p);
-  void ivector_randomly_fill(vector_t *p);
-  void cvector_randomly_fill(vector_t *p);
+  void vector_fill_randomly(vector_t *p);
+  void ivector_fill_randomly(vector_t *p);
+  void cvector_fill_randomly(vector_t *p);
   void vector_copy_vector(vector_t *q, int qi, vector_t *p, int pi, int n);
   void vector_copy_ivector(vector_t *q, int qi, vector_t *p, int pi, int n);
   void ivector_copy_vector(vector_t *q, int qi, vector_t *p, int pi, int n);
